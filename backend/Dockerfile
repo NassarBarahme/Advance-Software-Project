@@ -1,20 +1,20 @@
-# استخدم نسخة رسمية من Node.js
-FROM node:20-alpine
+﻿FROM node:20-alpine
 
-# تحديد مجلد العمل داخل الحاوية
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# نسخ ملفات package.json و package-lock.json
+# انسخ package أولاً لتستفيد من cache
 COPY package*.json ./
 
-# تثبيت الباكدجات (Run npm install)
+# ثبّت كل الحزم بما فيها dev deps (مهم للتطوير)
 RUN npm install
 
-# نسخ باقي ملفات المشروع (index.js)
+# ثبت nodemon عالميًا (مفيد للتطوير)
+RUN npm install -g nodemon
+
+# انسخ باقي المشروع
 COPY . .
 
-# فتح بورت 3000
 EXPOSE 3000
 
-# تشغيل التطبيق
-CMD ["node", "index.js"]
+# أثناء التطوير
+CMD ["npm", "run", "dev"]
