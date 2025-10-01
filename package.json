@@ -8,6 +8,7 @@
     "dev": "nodemon index.js",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test-db": "node test-db.js",
     "build": "echo 'Build completed'",
     "lint": "eslint .",
     "docker:build": "docker-compose build",
