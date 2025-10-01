@@ -1,52 +1,71 @@
-﻿version: "3.8"
+﻿version: '3.8'
 
 services:
-  healthpal-db:
-    image: mysql:8.0
-    container_name: healthpal-db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: root
-      MYSQL_PASSWORD: rootpassword
-    ports:
-      - "3307:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/schema.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  healthpal-app:
-    build:
-      context: ./backend
-    container_name: healthpal-app
-    env_file:
-      - ./backend/.env
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpal-api
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=healthpal
+      - DB_PORT=3306
+      - JWT_SECRET=healthpal-secret-key-2024
     depends_on:
-      healthpal-db:
+      db:
         condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - healthpal-network
 
-  healthpal-phpmyadmin:
+  db:
+    image: mysql:8.0
+    container_name: healthpal-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: healthpal
+      MYSQL_USER: healthpal_user
+      MYSQL_PASSWORD: healthpal_pass
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    networks:
+      - healthpal-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "-prootpassword"]
+      timeout: 20s
+      retries: 10
+      start_period: 40s
+      interval: 10s
+
+  phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: healthpal-phpmyadmin
     environment:
-      PMA_HOST: healthpal-db
+      PMA_HOST: db
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # إضافة اختيارية: تسجيل دخول تلقائي (للتطوير فقط)
-      # PMA_USER: root
-      # PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: rootpassword
     ports:
       - "8080:80"
     depends_on:
-      - healthpal-db
+      - db
+    networks:
+      - healthpal-network
 
 volumes:
   db_data:
+    driver: local
+
+networks:
+  healthpal-network:
+    driver: bridge
