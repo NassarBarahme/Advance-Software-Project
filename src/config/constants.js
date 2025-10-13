@@ -1,6 +1,6 @@
-// Application Constants
+
 module.exports = {
-  // User Roles
+  
   ROLES: {
     PATIENT: 'patient',
     DOCTOR: 'doctor',
@@ -9,7 +9,7 @@ module.exports = {
     ADMIN: 'admin'
   },
 
-  // Consultation Status
+  
   CONSULTATION_STATUS: {
     PENDING: 'pending',
     CONFIRMED: 'confirmed',
@@ -17,7 +17,7 @@ module.exports = {
     CANCELLED: 'cancelled'
   },
 
-  // Payment/Donation Status
+ 
   PAYMENT_STATUS: {
     PENDING: 'pending',
     COMPLETED: 'completed',
@@ -25,7 +25,7 @@ module.exports = {
     REFUNDED: 'refunded'
   },
 
-  // Medication Request Status
+  
   MEDICATION_STATUS: {
     REQUESTED: 'requested',
     APPROVED: 'approved',
@@ -34,7 +34,7 @@ module.exports = {
     REJECTED: 'rejected'
   },
 
-  // Mental Health Session Status
+  
   SESSION_STATUS: {
     SCHEDULED: 'scheduled',
     ONGOING: 'ongoing',
@@ -42,7 +42,7 @@ module.exports = {
     CANCELLED: 'cancelled'
   },
 
-  // NGO Mission Status
+  
   MISSION_STATUS: {
     PLANNED: 'planned',
     ACTIVE: 'active',
@@ -50,14 +50,14 @@ module.exports = {
     CANCELLED: 'cancelled'
   },
 
-  // Verification Status
+ 
   VERIFICATION_STATUS: {
     PENDING: 'pending',
     VERIFIED: 'verified',
     REJECTED: 'rejected'
   },
 
-  // Languages
+  
   LANGUAGES: {
     ARABIC: 'ar',
     ENGLISH: 'en'
