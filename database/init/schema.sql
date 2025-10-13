@@ -7,7 +7,7 @@ USE healthpal;
 
 -- ================================
 -- ROLES & PERMISSIONS
--- ================================
+
 CREATE TABLE roles (
   role_id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL UNIQUE,
@@ -360,9 +360,8 @@ CREATE TABLE health_alerts (
   CONSTRAINT fk_alert_creator FOREIGN KEY (created_by) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ================================
--- SYSTEM TABLES
--- ================================
+
+
 CREATE TABLE notifications (
   notification_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,

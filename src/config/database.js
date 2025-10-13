@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Create connection pool
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -15,7 +15,7 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 0
 });
 
-// Test database connection
+
 const testConnection = async () => {
   try {
     const connection = await pool.getConnection();
@@ -27,7 +27,7 @@ const testConnection = async () => {
   }
 };
 
-// Run test on startup
+
 testConnection();
 
 module.exports = pool;
