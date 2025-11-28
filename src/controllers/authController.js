@@ -80,6 +80,10 @@ async function registerUser(req, res) {
       });
     }
 
+
+// Temporary change 
+
+
    
     const emailExists = await usersDB.emailCheck(email);
     if (emailExists) {
