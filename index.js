@@ -1,6 +1,10 @@
 ﻿require('dotenv').config(); 
 const express = require('express');
 const app = express();
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public")));
+
+
 
 const userRoutes = require('./src/routes/userRoutes');
 const authRoutes = require('./src/routes/auth');  

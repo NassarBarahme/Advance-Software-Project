@@ -19,12 +19,12 @@ router.get("/me", authenticateToken, getMyProfile);
 
 router.get("/", authenticateToken, requireRole('admin'), getUsers);
 
-router.get("/:id", authenticateToken, getUserByIdController);
+
 
 
 router.get("/:id/profile", authenticateToken, getUserProfileController);
 
-
+router.get("/:id", authenticateToken, getUserByIdController);
 router.put("/:id", authenticateToken, updateUserController);
 
 
