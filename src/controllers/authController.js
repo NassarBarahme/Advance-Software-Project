@@ -10,13 +10,13 @@ async function registerUser(req, res) {
   const connection = await pool.getConnection();
   
   try {
-    const { 
-      full_name, 
-      email, 
-      password, 
-      role, 
-      phone_number, 
-      date_of_birth, 
+    const {
+      full_name,
+      email,
+      password,
+      role,
+      phone_number,
+      date_of_birth,
       gender,
       preferred_language,
       
@@ -28,23 +28,23 @@ async function registerUser(req, res) {
 
   
     if (!full_name || !email || !password || !role) {
-      return res.status(400).json({ 
-        error: "full_name, email, password, and role are required" 
+      return res.status(400).json({
+        error: "full_name, email, password, and role are required"
       });
     }
 
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        error: "Invalid email format" 
+      return res.status(400).json({
+        error: "Invalid email format"
       });
     }
 
   
     if (password.length < 6) {
-      return res.status(400).json({ 
-        error: "Password must be at least 6 characters" 
+      return res.status(400).json({
+        error: "Password must be at least 6 characters"
       });
     }
 
@@ -58,37 +58,31 @@ async function registerUser(req, res) {
       'admin': 6
     };
 
-   
     if (!roleMapping[role]) {
-      return res.status(400).json({ 
-        error: "role must be one of: patient, doctor, donor, ngo, pharmacy, admin" 
+      return res.status(400).json({
+        error: "role must be one of: patient, doctor, donor, ngo, pharmacy, admin"
       });
     }
-
     const role_id = roleMapping[role];
 
- 
+
     if (role === 'doctor' && !specialization) {
-      return res.status(400).json({ 
-        error: "specialization is required for doctors" 
+      return res.status(400).json({
+        error: "specialization is required for doctors"
       });
     }
 
     if (role === 'ngo' && !organization_name) {
-      return res.status(400).json({ 
-        error: "organization_name is required for NGOs" 
+      return res.status(400).json({
+        error: "organization_name is required for NGOs"
       });
     }
 
 
-// Temporary change 
-
-
-   
     const emailExists = await usersDB.emailCheck(email);
     if (emailExists) {
-      return res.status(400).json({ 
-        error: "Email already exists" 
+      return res.status(400).json({
+        error: "Email already exists"
       });
     }
 
@@ -98,18 +92,18 @@ async function registerUser(req, res) {
   
     await connection.beginTransaction();
 
- 
+
     const [result] = await connection.query(
-      `INSERT INTO users 
-       (full_name, email, password_hash, role_id, phone_number, date_of_birth, gender, preferred_language, is_verified, is_active) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, TRUE)`,
+      `INSERT INTO users
+      (full_name, email, password_hash, role_id, phone_number, date_of_birth, gender, preferred_language, is_verified, is_active)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, TRUE)`,
       [
-        full_name, 
-        email, 
-        hashedPassword, 
-        role_id, 
-        phone_number || null, 
-        date_of_birth || null, 
+        full_name,
+        email,
+        hashedPassword,
+        role_id,
+        phone_number || null,
+        date_of_birth || null,
         gender || null,
         preferred_language || 'arabic'
       ]
@@ -119,41 +113,41 @@ async function registerUser(req, res) {
 
     
     if (role === 'patient') {
-     
+
       await connection.query(
         "INSERT INTO patients (patient_id) VALUES (?)",
         [user_id]
       );
     } else if (role === 'doctor') {
-     
+  
       await connection.query(
         "INSERT INTO doctors (doctor_id, specialization, license_number, experience_years) VALUES (?, ?, ?, ?)",
         [user_id, specialization, license_number || null, 0]
       );
     } else if (role === 'ngo') {
-   
+  
       await connection.query(
         "INSERT INTO ngos (ngo_id, organization_name, license_number, verified) VALUES (?, ?, ?, ?)",
         [user_id, organization_name, license_number || null, false]
       );
     }
 
-   
+  
     await connection.commit();
 
 
     const accessToken = jwt.sign(
-      { 
-        user_id: user_id, 
-        email: email, 
-        role: role 
+      {
+        user_id: user_id,
+        email: email,
+        role: role
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     const refreshToken = jwt.sign(
-      { 
+      {
         user_id: user_id,
         email: email,
         role: role
@@ -181,12 +175,12 @@ async function registerUser(req, res) {
     });
 
   } catch (error) {
-   
+
     await connection.rollback();
     console.error("Registration error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Registration failed",
-      details: error.message 
+      details: error.message
     });
   } finally {
     connection.release();
@@ -199,43 +193,41 @@ async function loginUser(req, res) {
     const { email, password } = req.body;
     
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: "Email and password are required" 
+      return res.status(400).json({
+        error: "Email and password are required"
       });
     }
 
-   
     const [users] = await pool.query(
       `SELECT u.*, r.name AS role_name
-       FROM users u
-       JOIN roles r ON u.role_id = r.role_id
-       WHERE u.email = ?`,
+    FROM users u
+      JOIN roles r ON u.role_id = r.role_id
+      WHERE u.email = ?`,
       [email]
     );
 
     if (users.length === 0) {
-      return res.status(401).json({ 
-        error: "Invalid email or password" 
+      return res.status(401).json({
+        error: "Invalid email or password"
       });
     }
 
     const user = users[0];
 
- 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ 
-        error: "Invalid email or password" 
+      return res.status(401).json({
+        error: "Invalid email or password"
       });
     }
 
     if (!user.is_active) {
-      return res.status(403).json({ 
-        error: "Account is inactive. Please contact support." 
+      return res.status(403).json({
+        error: "Account is inactive. Please contact support."
       });
     }
 
-   
+  
     const accessToken = jwt.sign(
       { user_id: user.user_id, email: user.email, role: user.role_name },
       process.env.JWT_SECRET,
@@ -273,8 +265,8 @@ async function loginUser(req, res) {
 
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ 
-      error: "Login failed. Please try again." 
+    res.status(500).json({
+      error: "Login failed. Please try again."
     });
   }
 }
@@ -286,29 +278,29 @@ async function refreshToken(req, res) {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ 
-        error: "Refresh token is required" 
+      return res.status(400).json({
+        error: "Refresh token is required"
       });
     }
 
- 
+
     const decoded = jwt.verify(
-      refreshToken, 
+      refreshToken,
       process.env.JWT_REFRESH_SECRET
     );
 
-   
+  
     const [users] = await pool.query(
-      `SELECT u.*, r.name as role_name 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.role_id 
-       WHERE u.user_id = ?`,
+      `SELECT u.*, r.name as role_name
+      FROM users u
+      JOIN roles r ON u.role_id = r.role_id
+      WHERE u.user_id = ?`,
       [decoded.user_id]
     );
 
     if (users.length === 0) {
-      return res.status(401).json({ 
-        error: "User not found" 
+      return res.status(401).json({
+        error: "User not found"
       });
     }
 
@@ -316,17 +308,17 @@ async function refreshToken(req, res) {
 
 
     if (!user.is_active) {
-      return res.status(403).json({ 
-        error: "Account is inactive" 
+      return res.status(403).json({
+        error: "Account is inactive"
       });
     }
 
   
     const accessToken = jwt.sign(
-      { 
+      {
         user_id: user.user_id,
         email: user.email,
-        role: user.role_name 
+        role: user.role_name
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -346,14 +338,14 @@ async function refreshToken(req, res) {
 
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        error: "Refresh token expired. Please login again." 
+      return res.status(401).json({
+        error: "Refresh token expired. Please login again."
       });
     }
     
     console.error("Refresh token error:", error);
-    res.status(401).json({ 
-      error: "Invalid refresh token" 
+    res.status(401).json({
+      error: "Invalid refresh token"
     });
   }
 }

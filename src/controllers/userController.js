@@ -9,6 +9,7 @@ const {
 } = require("../models/users_DB");
 
 
+// ✅ جلب بروفايلي الخاص
 async function getMyProfile(req, res) {
   try {
     const userId = req.user.user_id;
@@ -34,6 +35,7 @@ async function getMyProfile(req, res) {
 }
 
 
+// ✅ جلب كل المستخدمين - للـ Admin فقط
 async function getUsers(req, res) {
   try {
     const users = await getAllUsers();
@@ -53,14 +55,15 @@ async function getUsers(req, res) {
 }
 
 
+// ✅ جلب مستخدم بالـ ID
 async function getUserByIdController(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10);
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
     const requesterId = req.user.user_id;
     const requesterRole = req.user.role;
 
- 
+    // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ 
         error: "Invalid user ID" 
@@ -79,7 +82,7 @@ async function getUserByIdController(req, res) {
     delete user.password_hash;
     delete user.refresh_token;
     
-    
+    // إذا مش Admin ومش نفس المستخدم → إخفاء بيانات إضافية
     if (requesterRole !== "admin" && requesterId !== userId) {
       delete user.email;
       delete user.phone_number;
@@ -100,19 +103,22 @@ async function getUserByIdController(req, res) {
 }
 
 
+// ✅ جلب بروفايل مفصل
 async function getUserProfileController(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10);
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
     const requesterId = req.user.user_id;
     const requesterRole = req.user.role;
 
+    // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ 
         error: "Invalid user ID" 
       });
     }
 
+    // فقط Admin أو نفس المستخدم يقدر يشوف البروفايل الكامل
     if (requesterRole !== "admin" && requesterId !== userId) {
       return res.status(403).json({ 
         error: "Access denied. You can only view your own detailed profile." 
@@ -141,11 +147,11 @@ async function getUserProfileController(req, res) {
 }
 
 
-
+// ✅ تحديث المستخدم
 async function updateUserController(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10); 
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
     const requesterId = req.user.user_id;
     const requesterRole = req.user.role;
 
@@ -156,7 +162,7 @@ async function updateUserController(req, res) {
       });
     }
 
- 
+    // فقط Admin أو نفس المستخدم يقدر يعدل
     if (requesterRole !== "admin" && requesterId !== userId) {
       return res.status(403).json({ 
         error: "Access denied. You can only update your own profile." 
@@ -165,13 +171,15 @@ async function updateUserController(req, res) {
 
     const updateData = { ...req.body };
 
+    // المستخدم العادي ما يقدر يعدل الحقول الحساسة
     if (requesterRole !== "admin") {
       delete updateData.role;
       delete updateData.is_active;
       delete updateData.is_verified;
-      delete updateData.email;
+      delete updateData.email; // ✅ منع تغيير الإيميل
     }
 
+    // ✅ التحقق من عدم وجود بيانات فارغة
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ 
         error: "No data provided for update" 
@@ -186,6 +194,7 @@ async function updateUserController(req, res) {
       });
     }
 
+    // ✅ حذف البيانات الحساسة من الـ Response
     delete updatedUser.password_hash;
     delete updatedUser.refresh_token;
 
@@ -203,30 +212,35 @@ async function updateUserController(req, res) {
 }
 
 
+// ✅ تفعيل/تعطيل المستخدم - للـ Admin فقط
 async function toggleUserStatus(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10);
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
     const { is_active } = req.body;
 
+    // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ 
         error: "Invalid user ID" 
       });
     }
 
+    // ✅ التحقق من وجود القيمة
     if (is_active === undefined || is_active === null) {
       return res.status(400).json({ 
         error: "is_active field is required" 
       });
     }
 
+    // ✅ التحقق من النوع
     if (typeof is_active !== 'boolean') {
       return res.status(400).json({ 
         error: "is_active must be true or false" 
       });
     }
 
+    // ✅ منع تعطيل نفس الـ Admin
     if (userId === req.user.user_id) {
       return res.status(400).json({ 
         error: "You cannot deactivate your own account" 
@@ -256,22 +270,24 @@ async function toggleUserStatus(req, res) {
 }
 
 
+// ✅ التحقق من المستخدم - للـ Admin فقط
 async function verifyUserController(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10); 
-   
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
+
+    // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
-      return res.status(400).json({ 
-        error: "Invalid user ID" 
+      return res.status(400).json({
+        error: "Invalid user ID"
       });
     }
 
     const verified = await verifyUser(userId);
 
     if (!verified) {
-      return res.status(404).json({ 
-        error: "User not found" 
+      return res.status(404).json({
+        error: "User not found"
       });
     }
 
@@ -289,24 +305,27 @@ async function verifyUserController(req, res) {
 }
 
 
-
+// ✅ حذف المستخدم - للـ Admin فقط
 async function deleteUserController(req, res) {
   try {
     const { id } = req.params;
-    const userId = parseInt(id, 10);
+    const userId = parseInt(id, 10); // ✅ تحويل لـ Number
 
+    // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ 
         error: "Invalid user ID" 
       });
     }
 
+    // ✅ منع حذف نفس الـ Admin
     if (userId === req.user.user_id) {
       return res.status(400).json({ 
         error: "You cannot delete your own account" 
       });
     }
 
+    // ✅ التحقق من وجود المستخدم أولاً
     const user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ 
