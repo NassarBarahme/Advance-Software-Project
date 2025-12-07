@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthPal - Create Account</title>
+  <link rel="stylesheet" href="register.css">
+  <script defer src="register.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="glass-card">
+      <div class="logo">
+        <div class="logo-icon">🏥</div>
+        <h1>HealthPal</h1>
+        <p>Comprehensive Healthcare Platform</p>
+      </div>
+
+      <div id="message" class="message"></div>
+
+      <!-- Register Form -->
+      <form onsubmit="handleRegister(event)" id="registerForm">
+        <div class="form-section">
+    
+          
+          <div class="input-group">
+            <label>Full Name <span class="required">*</span></label>
+            <input type="text" name="full_name" required placeholder="Enter your full name">
+          </div>
+
+          <div class="input-group">
+            <label>Email Address <span class="required">*</span></label>
+            <input type="email" name="email" required placeholder="example@email.com">
+          </div>
+
+          <div class="input-group">
+            <label>Phone Number</label>
+            <input type="tel" name="phone_number" placeholder="">
+          </div>
+
+          <div class="input-group">
+            <label>Date of Birth</label>
+            <input type="date" name="date_of_birth">
+          </div>
+
+          <div class="input-group">
+            <label>Gender</label>
+            <select name="gender">
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label>Preferred Language</label>
+            <select name="preferred_language">
+              <option value="arabic">Arabic</option>
+              <option value="english">English</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Account Type</h3>
+          
+          <div class="input-group">
+            <label>Account Type <span class="required">*</span></label>
+            <select name="role" id="role-select" required>
+              <option value="">Select Account Type</option>
+              <option value="patient">Patient</option>
+              <option value="doctor">Doctor</option>
+              <option value="donor">Donor</option>
+              <option value="ngo">NGO</option>
+              <option value="pharmacy">Pharmacy</option>
+            </select>
+          </div>
+
+          <!-- Doctor Fields -->
+          <div class="input-group" id="specialization-group" style="display: none;">
+            <label>Specialization <span class="required">*</span></label>
+            <input type="text" name="specialization" placeholder="e.g., Cardiology, Pediatrics">
+          </div>
+
+          <div class="input-group" id="license-number-group" style="display: none;">
+            <label>License Number</label>
+            <input type="text" name="license_number" placeholder="Medical license number (optional)">
+          </div>
+
+          <!-- NGO Fields -->
+          <div class="input-group" id="organization-group" style="display: none;">
+            <label>Organization Name <span class="required">*</span></label>
+            <input type="text" name="organization_name" placeholder="Organization name">
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Password</h3>
+          
+          <div class="input-group">
+            <label>Password <span class="required">*</span></label>
+            <div class="input-wrapper">
+              <input type="password" id="register-password" name="password" required minlength="6" placeholder="At least 6 characters">
+              <span class="password-toggle" onclick="togglePassword('register-password')">👁️</span>
+            </div>
+            <small class="help-text">Must be at least 6 characters</small>
+          </div>
+
+          <div class="input-group">
+            <label>Confirm Password <span class="required">*</span></label>
+            <div class="input-wrapper">
+              <input type="password" id="confirm-password" name="confirm_password" required placeholder="Re-enter password">
+              <span class="password-toggle" onclick="togglePassword('confirm-password')">👁️</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn" id="register-btn">
+          <span id="btn-text">Create Account</span>
+          <span id="btn-loading" class="loading" style="display: none;"></span>
+        </button>
+      </form>
+
+      <div class="form-footer">
+        <p>Already have an account? <a href="/login.html">Login</a></p>
+        <p class="copyright">© 2024 HealthPal. All Rights Reserved</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

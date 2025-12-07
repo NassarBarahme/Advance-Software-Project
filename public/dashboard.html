@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthPal - Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script defer src="dashboard.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">🏥</div>
+          <h2>HealthPal</h2>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <h3 class="nav-section-title">Main Menu</h3>
+          <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" data-page="profile">
+            <span class="nav-icon">👤</span>
+            <span>Profile</span>
+          </a>
+        </div>
+
+        <!-- Patient Menu -->
+        <div class="nav-section" id="patient-menu" style="display: none;">
+          <h3 class="nav-section-title">Patient</h3>
+          <a href="#" class="nav-item" data-page="medical-cases">
+            <span class="nav-icon">🏥</span>
+            <span>Medical Cases</span>
+          </a>
+          <a href="#" class="nav-item" data-page="consultations">
+            <span class="nav-icon">💬</span>
+            <span>Consultations</span>
+          </a>
+          <a href="#" class="nav-item" data-page="medication-requests">
+            <span class="nav-icon">💊</span>
+            <span>Medication Requests</span>
+          </a>
+          <a href="#" class="nav-item" data-page="mental-health">
+            <span class="nav-icon">🧠</span>
+            <span>Mental Health</span>
+          </a>
+          <a href="#" class="nav-item" data-page="support-groups">
+            <span class="nav-icon">👥</span>
+            <span>Support Groups</span>
+          </a>
+        </div>
+
+        <!-- Doctor Menu -->
+        <div class="nav-section" id="doctor-menu" style="display: none;">
+          <h3 class="nav-section-title">Doctor</h3>
+          <a href="#" class="nav-item" data-page="consultations">
+            <span class="nav-icon">💬</span>
+            <span>Consultations</span>
+          </a>
+          <a href="#" class="nav-item" data-page="medical-cases">
+            <span class="nav-icon">🏥</span>
+            <span>Medical Cases</span>
+          </a>
+        </div>
+
+        <!-- Donor Menu -->
+        <div class="nav-section" id="donor-menu" style="display: none;">
+          <h3 class="nav-section-title">Donor</h3>
+          <a href="#" class="nav-item" data-page="donations">
+            <span class="nav-icon">❤️</span>
+            <span>Donations</span>
+          </a>
+        </div>
+
+        <!-- NGO Menu -->
+        <div class="nav-section" id="ngo-menu" style="display: none;">
+          <h3 class="nav-section-title">NGO</h3>
+          <a href="#" class="nav-item" data-page="ngos">
+            <span class="nav-icon">🏛️</span>
+            <span>NGOs</span>
+          </a>
+          <a href="#" class="nav-item" data-page="donations">
+            <span class="nav-icon">❤️</span>
+            <span>Donations</span>
+          </a>
+        </div>
+
+        <!-- Pharmacy Menu -->
+        <div class="nav-section" id="pharmacy-menu" style="display: none;">
+          <h3 class="nav-section-title">Pharmacy</h3>
+          <a href="#" class="nav-item" data-page="medication-requests">
+            <span class="nav-icon">💊</span>
+            <span>Medication Requests</span>
+          </a>
+          <a href="#" class="nav-item" data-page="medical-inventory">
+            <span class="nav-icon">📦</span>
+            <span>Medical Inventory</span>
+          </a>
+        </div>
+
+        <!-- Admin Menu -->
+        <div class="nav-section" id="admin-menu" style="display: none;">
+          <h3 class="nav-section-title">Admin</h3>
+          <a href="#" class="nav-item" data-page="users">
+            <span class="nav-icon">👥</span>
+            <span>Users</span>
+          </a>
+          <a href="#" class="nav-item" data-page="medical-cases">
+            <span class="nav-icon">🏥</span>
+            <span>All Cases</span>
+          </a>
+          <a href="#" class="nav-item" data-page="ngos">
+            <span class="nav-icon">🏛️</span>
+            <span>NGOs</span>
+          </a>
+          <a href="#" class="nav-item" data-page="system">
+            <span class="nav-icon">⚙️</span>
+            <span>System Settings</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout" onclick="handleLogout()">
+          <span class="nav-icon">🚪</span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">
+            <span>☰</span>
+          </button>
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="top-bar-right">
+          <div class="user-info">
+            <span id="user-name">User</span>
+            <span id="user-role" class="user-role-badge"></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="content-area">
+        <!-- Dashboard Home -->
+        <div id="page-dashboard" class="page active">
+          <div class="welcome-section">
+            <h2>Welcome to HealthPal</h2>
+            <p>Comprehensive Healthcare Platform</p>
+          </div>
+
+          <div class="stats-grid" id="stats-grid">
+            <!-- Stats will be loaded dynamically -->
+          </div>
+
+          <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="actions-grid" id="quick-actions-grid">
+              <!-- Quick actions will be loaded based on user role -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="page-profile" class="page">
+          <div class="page-header">
+            <h2>Profile</h2>
+          </div>
+          <div class="profile-container" id="profile-container">
+            <!-- Profile content will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Medical Cases Page -->
+        <div id="page-medical-cases" class="page">
+          <div class="page-header">
+            <h2>Medical Cases</h2>
+            <button class="btn btn-primary" onclick="showAddMedicalCaseModal()">Add New Case</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="medical-cases-table">
+              <thead>
+                <tr>
+                  <th>Case ID</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="medical-cases-tbody">
+                <!-- Data will be loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Consultations Page -->
+        <div id="page-consultations" class="page">
+          <div class="page-header">
+            <h2>Consultations</h2>
+            <button class="btn btn-primary" onclick="showAddConsultationModal()">New Consultation</button>
+          </div>
+          <div class="consultations-list" id="consultations-list">
+            <!-- Consultations will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Donations Page -->
+        <div id="page-donations" class="page">
+          <div class="page-header">
+            <h2>Donations</h2>
+            <button class="btn btn-primary" onclick="showAddDonationModal()">New Donation</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="donations-table">
+              <thead>
+                <tr>
+                  <th>Donation ID</th>
+                  <th>Type</th>
+                  <th>Amount/Quantity</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="donations-tbody">
+                <!-- Data will be loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Medication Requests Page -->
+        <div id="page-medication-requests" class="page">
+          <div class="page-header">
+            <h2>Medication Requests</h2>
+            <button class="btn btn-primary" onclick="showAddMedicationRequestModal()">New Request</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="medication-requests-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Medication</th>
+                  <th>Quantity</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="medication-requests-tbody">
+                <!-- Data will be loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mental Health Page -->
+        <div id="page-mental-health" class="page">
+          <div class="page-header">
+            <h2>Mental Health Sessions</h2>
+            <button class="btn btn-primary" onclick="showAddMentalHealthSessionModal()">New Session</button>
+          </div>
+          <div class="sessions-list" id="mental-health-sessions-list">
+            <!-- Sessions will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Support Groups Page -->
+        <div id="page-support-groups" class="page">
+          <div class="page-header">
+            <h2>Support Groups</h2>
+            <button class="btn btn-primary" onclick="showAddSupportGroupModal()">New Group</button>
+          </div>
+          <div class="groups-list" id="support-groups-list">
+            <!-- Groups will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- NGOs Page -->
+        <div id="page-ngos" class="page">
+          <div class="page-header">
+            <h2>NGOs</h2>
+            <button class="btn btn-primary" id="add-ngo-btn" onclick="showAddNGOModal()" style="display: none;">Add NGO</button>
+          </div>
+          <div class="ngos-grid" id="ngos-grid">
+            <!-- NGOs will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Medical Inventory Page -->
+        <div id="page-medical-inventory" class="page">
+          <div class="page-header">
+            <h2>Medical Inventory</h2>
+            <button class="btn btn-primary" onclick="showAddInventoryModal()">Add Item</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="inventory-table">
+              <thead>
+                <tr>
+                  <th>Item Name</th>
+                  <th>Quantity</th>
+                  <th>Type</th>
+                  <th>Expiry Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-tbody">
+                <!-- Data will be loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Users Page (Admin) -->
+        <div id="page-users" class="page">
+          <div class="page-header">
+            <h2>User Management</h2>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <!-- Data will be loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- System Settings Page (Admin) -->
+        <div id="page-system" class="page">
+          <div class="page-header">
+            <h2>System Settings</h2>
+          </div>
+          <div class="settings-container" id="system-settings">
+            <!-- Settings will be loaded dynamically -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modals will be added dynamically via JavaScript -->
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal()"></div>
+</body>
+</html>
+

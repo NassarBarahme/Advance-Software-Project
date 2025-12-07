@@ -25,7 +25,7 @@ const systemRoutes = require('./src/routes/systemRoutes');
 
 
 
-const medicalCaseRoutes = require('./src/routes/medicalCaseRoutes');// sally********
+
 
 
 
@@ -50,14 +50,25 @@ app.use('/api/system', systemRoutes);
 
 
 
-//app.use('/medical_cases', medicalCaseRoutes);// sally********
-app.use('/api/medical-cases', medicalCaseRoutes);// sally********
 
 
 
 
 app.get('/', (req, res) => {
-  res.send('API is working!');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Serve HTML files explicitly
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/register.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 
