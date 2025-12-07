@@ -1,57 +1,64 @@
-﻿const express = require("express");
-const mysql = require("mysql2/promise");
-require("dotenv").config();
+﻿const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+require('dotenv').config();
+
+const pool = require('./src/config/database');
+
+// Import Routes
+const patientsRoutes = require('./src/routes/patients');
+const healthContentRoutes = require('./src/routes/healthContent');
+const healthAlertsRoutes = require('./src/routes/healthAlerts');
+const doctorsRoutes = require('./src/routes/doctors');
+const userRoutes = require('./src/routes/userRoutes');
+const authRoutes = require('./src/routes/auth');  
+
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-let connection;
+// Middleware
+app.use(helmet()); // Security headers
+app.use(cors()); // Enable CORS
+app.use(morgan('dev')); // Logging
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-(async () => {
-  try {
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-    });
-    console.log("✅ Connected to MySQL database");
-  } catch (err) {
-    console.error("❌ Database connection failed:", err);
-  }
-})();
 
-app.get("/", (req, res) => {
-  res.send("🚀 Welcome to HealthPal API");
+// Health Check Endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: ' Welcome to HealthPal API',
+    version: '1.0.0',
+    endpoints: {
+      patients: '/patients',
+      healthContent: '/health_content',
+      healthAlerts: '/health_alerts',
+      doctors: '/doctors'
+    }
+  });
 });
 
-app.get("/health", async (req, res) => {
+app.get('/health', async (req, res) => {
   try {
-    await connection.query("SELECT 1");
-    res.json({ status: "ok" });
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', database: 'connected' });
   } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
-app.get("/tables", async (req, res) => {
-  try {
-    const [rows] = await connection.query("SHOW TABLES");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 });
 
-app.get("/roles", async (req, res) => {
-  try {
-    const [rows] = await connection.query("SELECT * FROM roles");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// API Routes
+app.use('/api/patients', patientsRoutes);
+app.use('/api/health_content', healthContentRoutes);
+app.use('/api/health_alerts', healthAlertsRoutes);
+app.use('/api/doctors', doctorsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);  
 
+// Start Server
 app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(` Server running at http://localhost:${port}`);
+  console.log(` API Documentation available at http://localhost:${port}`);
 });

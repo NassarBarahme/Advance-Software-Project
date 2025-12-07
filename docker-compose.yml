@@ -1,6 +1,4 @@
-﻿version: '3.8'
-
-services:
+﻿services:
   app:
     build: 
       context: .
@@ -16,6 +14,8 @@ services:
       - DB_NAME=healthpal
       - DB_PORT=3306
       - JWT_SECRET=healthpal-secret-key-2024
+      - JWT_REFRESH_SECRET=healthpal-refresh-secret-key-2024
+
     depends_on:
       db:
         condition: service_healthy
@@ -24,6 +24,7 @@ services:
     restart: unless-stopped
     networks:
       - healthpal-network
+    command: sh -c "/app/wait-for-it.sh db 3306 && node index.js"
 
   db:
     image: mysql:8.0
@@ -37,12 +38,12 @@ services:
       - ./database/init:/docker-entrypoint-initdb.d
       - db_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     restart: unless-stopped
     networks:
       - healthpal-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       timeout: 20s
       retries: 10
       start_period: 40s
@@ -58,9 +59,11 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - healthpal-network
+    restart: unless-stopped
 
 volumes:
   db_data:

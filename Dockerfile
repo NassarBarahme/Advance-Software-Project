@@ -1,33 +1,52 @@
 ﻿FROM node:18-alpine
 
-# إنشاء مجلد العمل
+
+RUN apk add --no-cache bash netcat-openbsd
+
+
 WORKDIR /app
 
-# نسخ ملفات package
+
 COPY package*.json ./
 
-# تثبيت التبعيات
+
 RUN npm ci --only=production
 
-# نسخ باقي الملفات
+
 COPY . .
 
-# إنشاء مجلد للرفع إن لم يكن موجوداً
+
 RUN mkdir -p uploads
 
-# تعيين الصلاحيات
+
 RUN chmod -R 755 /app
 
-# عرض المنفذ
+
+RUN echo '#!/bin/sh' > /app/wait-for-it.sh && \
+    echo 'set -e' >> /app/wait-for-it.sh && \
+    echo 'host="$1"' >> /app/wait-for-it.sh && \
+    echo 'shift' >> /app/wait-for-it.sh && \
+    echo 'port="$1"' >> /app/wait-for-it.sh && \
+    echo 'shift' >> /app/wait-for-it.sh && \
+    echo 'echo "Waiting for $host:$port..."' >> /app/wait-for-it.sh && \
+    echo 'until nc -z "$host" "$port"; do' >> /app/wait-for-it.sh && \
+    echo '  sleep 2' >> /app/wait-for-it.sh && \
+    echo '  echo "Still waiting for $host:$port..."' >> /app/wait-for-it.sh && \
+    echo 'done' >> /app/wait-for-it.sh && \
+    echo 'echo "✅ $host:$port is available!"' >> /app/wait-for-it.sh && \
+    echo 'exec "$@"' >> /app/wait-for-it.sh && \
+    chmod +x /app/wait-for-it.sh
+
+
 EXPOSE 3000
 
-# متغيرات البيئة (يمكن تجاوزها في docker-compose)
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# فحص صحة الحاوية
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# تشغيل التطبيق
+
 CMD ["node", "index.js"]
