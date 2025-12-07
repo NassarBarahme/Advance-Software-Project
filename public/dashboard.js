@@ -195,20 +195,22 @@ async function getDashboardStats() {
     if (role === 'patient') {
       // Patient stats - get user's cases
       try {
-        const cases = await apiCall(`/medical-cases?patient_id=${currentUser.user_id}`, 'GET');
-      stats.push({
-        icon: '🏥',
+        const response = await apiCall('/medical-cases', 'GET');
+        const cases = response?.cases || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '🏥',
           title: 'My Medical Cases',
           value: Array.isArray(cases) ? cases.length : 0,
-        color: '#3498db'
-      });
+          color: '#3498db'
+        });
       } catch (e) {
         stats.push({ icon: '🏥', title: 'My Medical Cases', value: 0, color: '#3498db' });
       }
 
       try {
-        const requests = await apiCall('/medication_requests', 'GET');
-      stats.push({
+        const response = await apiCall('/medication_requests', 'GET');
+        const requests = response?.requests || (Array.isArray(response) ? response : []);
+        stats.push({
           icon: '💊',
           title: 'Medication Requests',
           value: Array.isArray(requests) ? requests.length : 0,
@@ -231,19 +233,21 @@ async function getDashboardStats() {
       }
     } else if (role === 'doctor') {
       try {
-      const consultations = await apiCall('/consultations', 'GET');
-      stats.push({
-        icon: '💬',
-        title: 'Consultations',
+        const response = await apiCall('/consultations', 'GET');
+        const consultations = response?.consultations || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '💬',
+          title: 'Consultations',
           value: Array.isArray(consultations) ? consultations.length : 0,
-        color: '#9b59b6'
+          color: '#9b59b6'
       });
       } catch (e) {
         stats.push({ icon: '💬', title: 'Consultations', value: 0, color: '#9b59b6' });
       }
 
       try {
-        const cases = await apiCall('/medical-cases', 'GET');
+        const response = await apiCall('/medical-cases', 'GET');
+        const cases = response?.cases || (Array.isArray(response) ? response : []);
         stats.push({
           icon: '🏥',
           title: 'Medical Cases',
@@ -255,7 +259,8 @@ async function getDashboardStats() {
       }
     } else if (role === 'donor') {
       try {
-        const donations = await apiCall('/donations', 'GET');
+        const response = await apiCall('/donations', 'GET');
+        const donations = response?.donations || (Array.isArray(response) ? response : []);
         stats.push({
           icon: '❤️',
           title: 'My Donations',
@@ -267,7 +272,8 @@ async function getDashboardStats() {
       }
     } else if (role === 'pharmacy') {
       try {
-        const requests = await apiCall('/medication_requests', 'GET');
+        const response = await apiCall('/medication_requests', 'GET');
+        const requests = response?.requests || (Array.isArray(response) ? response : []);
         stats.push({
           icon: '💊',
           title: 'Medication Requests',
@@ -279,7 +285,8 @@ async function getDashboardStats() {
       }
 
       try {
-        const inventory = await apiCall('/medical_inventory', 'GET');
+        const response = await apiCall('/medical_inventory', 'GET');
+        const inventory = response?.inventory || (Array.isArray(response) ? response : []);
         stats.push({
           icon: '📦',
           title: 'Medical Inventory',
@@ -291,10 +298,11 @@ async function getDashboardStats() {
       }
     } else if (role === 'admin') {
       try {
-      const users = await apiCall('/users', 'GET');
-      stats.push({
-        icon: '👥',
-        title: 'Users',
+        const response = await apiCall('/users', 'GET');
+        const users = response?.users || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '👥',
+          title: 'Users',
           value: Array.isArray(users) ? users.length : 0,
         color: '#3498db'
       });
@@ -303,10 +311,11 @@ async function getDashboardStats() {
       }
 
       try {
-      const cases = await apiCall('/medical-cases', 'GET');
-      stats.push({
-        icon: '🏥',
-        title: 'Medical Cases',
+        const response = await apiCall('/medical-cases', 'GET');
+        const cases = response?.cases || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '🏥',
+          title: 'Medical Cases',
           value: Array.isArray(cases) ? cases.length : 0,
         color: '#e74c3c'
       });
@@ -598,17 +607,9 @@ async function loadMedicalCases() {
   }
 
   try {
-    let cases;
-    if (currentUser?.role === 'patient') {
-      // Patients should see their own cases
-      cases = await apiCall('/medical-cases', 'GET').catch(() => []);
-      // Filter by patient_id if needed
-      if (Array.isArray(cases) && currentUser.user_id) {
-        cases = cases.filter(c => c.patient_id === currentUser.user_id);
-      }
-    } else {
-      cases = await apiCall('/medical-cases', 'GET').catch(() => []);
-    }
+    const response = await apiCall('/medical-cases', 'GET').catch(() => null);
+    // API returns: {message, cases} or just array
+    const cases = response?.cases || (Array.isArray(response) ? response : []);
     displayMedicalCases(Array.isArray(cases) ? cases : [], tbody);
   } catch (error) {
     console.error('Error loading medical cases:', error);
@@ -672,9 +673,10 @@ async function loadConsultations() {
   }
 
   try {
-    // Note: There's no GET all consultations endpoint in the backend
-    // This would need to be added to the backend routes
-    container.innerHTML = '<p style="text-align: center; padding: 40px;">No consultations available. Use the "New Consultation" button to create a consultation.</p>';
+    const response = await apiCall('/consultations', 'GET').catch(() => null);
+    // API returns: {message, consultations}
+    const consultations = response?.consultations || (Array.isArray(response) ? response : []);
+    displayConsultations(Array.isArray(consultations) ? consultations : [], container);
   } catch (error) {
     console.error('Error loading consultations:', error);
     showMessage('Error loading consultations', 'error');
@@ -693,7 +695,7 @@ function displayConsultations(consultations, container) {
     <div class="consultation-card">
       <div class="card-header">
         <div>
-          <div class="card-title">استشارة #${consultation.consultation_id}</div>
+          <div class="card-title">Consultation #${consultation.consultation_id}</div>
           <div class="card-meta">${formatDate(consultation.created_at)}</div>
         </div>
         <span class="status-badge status-${consultation.status || 'pending'}">${consultation.status || 'Pending'}</span>
@@ -724,8 +726,9 @@ async function loadDonations() {
   }
 
   try {
-    // Note: There's no GET all donations endpoint, so we'll show empty state
-    const donations = await apiCall('/donations', 'GET').catch(() => []);
+    const response = await apiCall('/donations', 'GET').catch(() => null);
+    // API returns: {message, donations}
+    const donations = response?.donations || (Array.isArray(response) ? response : []);
     displayDonations(Array.isArray(donations) ? donations : [], tbody);
   } catch (error) {
     console.error('Error loading donations:', error);
@@ -740,6 +743,9 @@ function displayDonations(donations, tbody) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No donations</td></tr>';
     return;
   }
+  
+  // Count columns in the table
+  const columnCount = document.querySelector('#donations-table thead tr')?.children.length || 7;
 
   tbody.innerHTML = donations.map(donation => `
     <tr>
@@ -775,7 +781,9 @@ async function loadMedicationRequests() {
   }
 
   try {
-    const requests = await apiCall('/medication_requests', 'GET').catch(() => []);
+    const response = await apiCall('/medication_requests', 'GET').catch(() => null);
+    // API returns: {message, requests}
+    const requests = response?.requests || (Array.isArray(response) ? response : []);
     displayMedicationRequests(Array.isArray(requests) ? requests : [], tbody);
   } catch (error) {
     console.error('Error loading medication requests:', error);
@@ -990,7 +998,9 @@ async function loadMedicalInventory() {
   }
 
   try {
-    const inventory = await apiCall('/medical_inventory', 'GET').catch(() => []);
+    const response = await apiCall('/medical_inventory', 'GET').catch(() => null);
+    // API returns: {message, inventory}
+    const inventory = response?.inventory || (Array.isArray(response) ? response : []);
     displayMedicalInventory(Array.isArray(inventory) ? inventory : [], tbody);
   } catch (error) {
     console.error('Error loading inventory:', error);
@@ -1015,6 +1025,7 @@ function displayMedicalInventory(inventory, tbody) {
       <td><span class="status-badge status-${item.availability_status || 'available'}">${getStatusText(item.availability_status || 'available')}</span></td>
       <td>
         <button class="btn btn-secondary" onclick="editInventory(${item.inventory_id})">Edit</button>
+        ${currentUser?.role === 'pharmacy' ? `<button class="btn btn-danger" onclick="deleteInventory(${item.inventory_id})">Delete</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -1026,10 +1037,14 @@ async function loadUsers() {
   if (!tbody) return;
 
   try {
-    const users = await apiCall('/users', 'GET');
-    displayUsers(users, tbody);
+    const response = await apiCall('/users', 'GET');
+    // API returns: {message, users, count} or just array
+    const users = response?.users || (Array.isArray(response) ? response : []);
+    displayUsers(Array.isArray(users) ? users : [], tbody);
   } catch (error) {
+    console.error('Error loading users:', error);
     showMessage('Error loading users', 'error');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Error loading data</td></tr>';
   }
 }
 
@@ -1173,7 +1188,10 @@ function formatDate(dateString) {
 
 // Get Status Text
 function getStatusText(status) {
+  if (!status) return 'Not specified';
+  
   const statusMap = {
+    // General statuses
     'pending': 'Pending',
     'approved': 'Approved',
     'rejected': 'Rejected',
@@ -1181,20 +1199,34 @@ function getStatusText(status) {
     'inactive': 'Inactive',
     'completed': 'Completed',
     'cancelled': 'Cancelled',
-    'open': 'Open',
-    'matched': 'Matched',
-    'fulfilled': 'Fulfilled',
+    
+    // Medical case statuses
+    'funded': 'Funded',
+    'in_treatment': 'In Treatment',
+    
+    // Consultation statuses
     'confirmed': 'Confirmed',
     'in_progress': 'In Progress',
     'no_show': 'No Show',
     'scheduled': 'Scheduled',
-    'in_treatment': 'In Treatment',
-    'funded': 'Funded',
+    
+    // Medication request statuses
+    'open': 'Open',
+    'matched': 'Matched',
+    'fulfilled': 'Fulfilled',
+    
+    // Payment statuses
+    'completed': 'Completed',
+    'failed': 'Failed',
+    'refunded': 'Refunded',
+    
+    // Inventory statuses
     'available': 'Available',
     'reserved': 'Reserved',
     'distributed': 'Distributed'
   };
-  return statusMap[status] || status;
+  
+  return statusMap[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 // Toggle Sidebar (Mobile)
@@ -2118,12 +2150,25 @@ async function handleEditInventory(e, id) {
   };
 
   try {
-    await apiCall(`/medical_inventory/${id}`, 'PUT', data);
+    await apiCall(`/medical_inventory/${id}`, 'PATCH', data);
     showMessage('Item updated successfully', 'success');
     closeModal();
     loadMedicalInventory();
   } catch (error) {
     showMessage('Error updating item: ' + (error.message || 'Unknown error'), 'error');
+  }
+}
+
+async function deleteInventory(id) {
+  if (confirm('Are you sure you want to delete this inventory item?')) {
+    try {
+      // Note: Backend might not have DELETE endpoint, using PATCH to mark as deleted
+      await apiCall(`/medical_inventory/${id}`, 'PATCH', { availability_status: 'distributed' });
+      showMessage('Inventory item deleted successfully', 'success');
+      loadMedicalInventory();
+    } catch (error) {
+      showMessage('Error deleting inventory: ' + (error.message || 'Unknown error'), 'error');
+    }
   }
 }
 

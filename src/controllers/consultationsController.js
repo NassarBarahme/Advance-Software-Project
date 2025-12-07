@@ -202,7 +202,54 @@ async function sendMessageController(req, res) {
   }
 }
 
+// Get all consultations (user sees their own consultations)
+async function getAllConsultationsController(req, res) {
+  try {
+    const userId = req.user.user_id;
+    const role = req.user.role;
+    const pool = require("../config/database");
+    
+    let query = `SELECT c.*, 
+                 p.full_name as patient_name,
+                 d.full_name as doctor_name
+                 FROM consultations c
+                 LEFT JOIN users p ON c.patient_id = p.user_id
+                 LEFT JOIN users d ON c.doctor_id = d.user_id`;
+    
+    let params = [];
+    
+    // Filter based on role
+    if (role === 'patient') {
+      query += ` WHERE c.patient_id = ?`;
+      params.push(userId);
+    } else if (role === 'doctor') {
+      query += ` WHERE c.doctor_id = ? OR c.doctor_id IS NULL`;
+      params.push(userId);
+    } else if (role !== 'admin') {
+      // Other roles see only their consultations
+      query += ` WHERE c.patient_id = ? OR c.doctor_id = ?`;
+      params.push(userId, userId);
+    }
+    
+    query += ` ORDER BY c.created_at DESC`;
+    
+    const [consultations] = await pool.query(query, params);
+    
+    res.json({
+      message: "Consultations retrieved successfully",
+      consultations
+    });
+  } catch (error) {
+    console.error("Get all consultations error:", error);
+    res.status(500).json({
+      error: "Failed to retrieve consultations",
+      details: error.message
+    });
+  }
+}
+
 module.exports = {
+  getAllConsultationsController,
   getConsultationController,
   createConsultationController,
   updateConsultationController,

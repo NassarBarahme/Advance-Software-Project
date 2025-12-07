@@ -1,5 +1,39 @@
 
 const donationModel = require("../models/donationModel");
+const pool = require("../config/database");
+
+// Get all donations (user sees their own donations, admin sees all)
+exports.getAllDonations = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const role = req.user.role;
+    
+    let query = `SELECT d.*, mc.case_title, u.full_name as donor_name 
+                 FROM donations d
+                 LEFT JOIN medical_cases mc ON d.medical_case_id = mc.case_id
+                 LEFT JOIN users u ON d.donor_id = u.user_id`;
+    
+    let params = [];
+    
+    // Non-admin users only see their own donations
+    if (role !== 'admin') {
+      query += ` WHERE d.donor_id = ?`;
+      params.push(userId);
+    }
+    
+    query += ` ORDER BY d.created_at DESC`;
+    
+    const [donations] = await pool.query(query, params);
+    
+    res.json({
+      message: "Donations retrieved successfully",
+      donations
+    });
+  } catch (err) {
+    console.error("Get all donations error:", err);
+    res.status(500).json({ error: "Failed to fetch donations" });
+  }
+};
 
 exports.getDonationsByCase = async (req, res) => {
   try {

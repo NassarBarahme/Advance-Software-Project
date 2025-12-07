@@ -10,7 +10,8 @@ const allowRoles = (...roles) => (req, res, next) => {
 };
 
 router.post("/", authenticateToken, requireRole("patient"), medicalCaseController.createCase);
-router.get("/", authenticateToken, requireRole("admin"), medicalCaseController.getAllCases);
+// Get all cases - admin sees all, patients see their own, donors/ngos see active cases
+router.get("/", authenticateToken, medicalCaseController.getAllCases);
 router.get("/:case_id", authenticateToken, medicalCaseController.getCaseById);
 router.put("/:case_id", authenticateToken, medicalCaseController.updateCase);
 router.delete("/:case_id", authenticateToken, requireRole("admin"), medicalCaseController.deleteCase);

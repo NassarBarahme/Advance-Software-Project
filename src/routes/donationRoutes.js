@@ -4,6 +4,8 @@ const router = express.Router();
 const donationController = require("../controllers/donationController"); 
 const { authenticateToken, requireRole } = require("../middleware/authenticateToken");
 
+// Get all donations (for authenticated users - they see their own donations)
+router.get("/", authenticateToken, donationController.getAllDonations);
 
 router.post("/", authenticateToken, donationController.createDonation); 
 

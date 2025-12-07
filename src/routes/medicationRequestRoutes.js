@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { createRequest, getRequestById, updateRequest } = require("../controllers/medicationRequestController");
+const { authenticateToken } = require("../middleware/authenticateToken");
+const { createRequest, getRequestById, updateRequest, getAllRequests } = require("../controllers/medicationRequestController");
 
-router.post("/", createRequest);
+// Get all medication requests
+router.get("/", authenticateToken, getAllRequests);
 
-router.get("/:request_id", getRequestById);
+router.post("/", authenticateToken, createRequest);
+
+router.get("/:request_id", authenticateToken, getRequestById);
 
 router.patch("/:request_id", updateRequest);
 

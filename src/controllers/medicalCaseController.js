@@ -28,8 +28,35 @@ exports.createCase = async (req, res) => {
 
 exports.getAllCases = async (req, res) => {
   try {
-    const cases = await medicalCaseModel.getAllCases();
-    res.json(cases);
+    const userId = req.user.user_id;
+    const role = req.user.role;
+    const pool = require("../config/database");
+    
+    let query = `SELECT mc.*, u.full_name as patient_name
+                 FROM medical_cases mc
+                 LEFT JOIN users u ON mc.patient_id = u.user_id`;
+    
+    let params = [];
+    
+    // Filter based on role
+    if (role === 'patient') {
+      // Patients see only their own cases
+      query += ` WHERE mc.patient_id = ?`;
+      params.push(userId);
+    } else if (role === 'donor' || role === 'ngo') {
+      // Donors and NGOs see active cases that need funding
+      query += ` WHERE mc.case_status IN ('active', 'in_treatment')`;
+    }
+    // Admin sees all cases (no WHERE clause)
+    
+    query += ` ORDER BY mc.created_at DESC`;
+    
+    const [cases] = await pool.query(query, params);
+    
+    res.json({
+      message: "Medical cases retrieved successfully",
+      cases
+    });
   } catch (err) {
     console.error("Error fetching cases:", err);
     res.status(500).json({ error: "Failed to get medical cases" });
