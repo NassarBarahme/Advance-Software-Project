@@ -37,7 +37,7 @@ async function createNGOController(req, res) {
 // Get all NGOs
 async function getAllNGOsController(req, res) {
   try {
-    const ngos = await getAllNGOs(req.db);
+    const ngos = await getAllNGOs();
     return ResponseHelper.success(res, ngos, 'NGOs retrieved successfully');
   } catch (error) {
     console.error('Error fetching NGOs:', error);
@@ -113,7 +113,7 @@ async function deleteNGOController(req, res) {
 async function searchNGOsController(req, res) {
   try {
     const { query, verified, limit = 10, offset = 0 } = req.query ?? {};
-    const rows = await searchNGOs(req.db, {
+    const rows = await searchNGOs({
       query,
       verified: verified !== undefined ? verified === 'true' : undefined,
       limit: parseInt(limit),

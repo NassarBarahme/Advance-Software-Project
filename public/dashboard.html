@@ -76,6 +76,10 @@
             <span class="nav-icon">❤️</span>
             <span>Donations</span>
           </a>
+          <a href="#" class="nav-item" data-page="medical-cases">
+            <span class="nav-icon">🏥</span>
+            <span>Medical Cases</span>
+          </a>
         </div>
 
         <!-- NGO Menu -->
@@ -187,15 +191,16 @@
         <div id="page-medical-cases" class="page">
           <div class="page-header">
             <h2>Medical Cases</h2>
-            <button class="btn btn-primary" onclick="showAddMedicalCaseModal()">Add New Case</button>
           </div>
           <div class="table-container">
             <table class="data-table" id="medical-cases-table">
               <thead>
                 <tr>
                   <th>Case ID</th>
-                  <th>Type</th>
+                  <th>Title</th>
                   <th>Status</th>
+                  <th>Target Amount</th>
+                  <th>Raised Amount</th>
                   <th>Date</th>
                   <th>Actions</th>
                 </tr>
@@ -211,7 +216,6 @@
         <div id="page-consultations" class="page">
           <div class="page-header">
             <h2>Consultations</h2>
-            <button class="btn btn-primary" onclick="showAddConsultationModal()">New Consultation</button>
           </div>
           <div class="consultations-list" id="consultations-list">
             <!-- Consultations will be loaded dynamically -->
@@ -222,7 +226,6 @@
         <div id="page-donations" class="page">
           <div class="page-header">
             <h2>Donations</h2>
-            <button class="btn btn-primary" onclick="showAddDonationModal()">New Donation</button>
           </div>
           <div class="table-container">
             <table class="data-table" id="donations-table">
@@ -230,8 +233,9 @@
                 <tr>
                   <th>Donation ID</th>
                   <th>Type</th>
-                  <th>Amount/Quantity</th>
-                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Currency</th>
+                  <th>Payment Status</th>
                   <th>Date</th>
                   <th>Actions</th>
                 </tr>
@@ -247,15 +251,15 @@
         <div id="page-medication-requests" class="page">
           <div class="page-header">
             <h2>Medication Requests</h2>
-            <button class="btn btn-primary" onclick="showAddMedicationRequestModal()">New Request</button>
           </div>
           <div class="table-container">
             <table class="data-table" id="medication-requests-table">
               <thead>
                 <tr>
                   <th>Request ID</th>
-                  <th>Medication</th>
+                  <th>Medication Name</th>
                   <th>Quantity</th>
+                  <th>Dosage</th>
                   <th>Status</th>
                   <th>Date</th>
                   <th>Actions</th>
@@ -272,7 +276,6 @@
         <div id="page-mental-health" class="page">
           <div class="page-header">
             <h2>Mental Health Sessions</h2>
-            <button class="btn btn-primary" onclick="showAddMentalHealthSessionModal()">New Session</button>
           </div>
           <div class="sessions-list" id="mental-health-sessions-list">
             <!-- Sessions will be loaded dynamically -->
@@ -305,16 +308,16 @@
         <div id="page-medical-inventory" class="page">
           <div class="page-header">
             <h2>Medical Inventory</h2>
-            <button class="btn btn-primary" onclick="showAddInventoryModal()">Add Item</button>
           </div>
           <div class="table-container">
             <table class="data-table" id="inventory-table">
               <thead>
                 <tr>
                   <th>Item Name</th>
-                  <th>Quantity</th>
+                  <th>Quantity Available</th>
                   <th>Type</th>
                   <th>Expiry Date</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
