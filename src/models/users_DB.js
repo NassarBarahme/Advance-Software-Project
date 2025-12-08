@@ -122,6 +122,21 @@ async function updateUser(user_id, updateData) {
       values
     );
 
+    // Update doctor specialization if provided
+    if (updateData.specialization !== undefined) {
+      const [doctorCheck] = await connection.query(
+        "SELECT 1 FROM doctors WHERE doctor_id = ?",
+        [user_id]
+      );
+      
+      if (doctorCheck.length > 0) {
+        await connection.query(
+          "UPDATE doctors SET specialization = ? WHERE doctor_id = ?",
+          [updateData.specialization, user_id]
+        );
+      }
+    }
+
     await connection.commit();
 
     const updatedUser = await getUserById(user_id);

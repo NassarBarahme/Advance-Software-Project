@@ -7,6 +7,9 @@ const { authenticateToken } = require("../middleware/authenticateToken");
 // Apply authentication to all consultation routes
 router.use(authenticateToken);
 
+// Get all consultations (user sees their own consultations)
+router.get('/', consultationsController.getAllConsultationsController);
+
 // Get consultation details
 router.get('/:id', consultationsController.getConsultationController);
 
