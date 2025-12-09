@@ -52,7 +52,6 @@ async function deletePermissionAssignment(role_id, permission_id) {
   }
 }
 
-// Get all permissions
 async function getAllPermissions() {
   try {
     const [rows] = await pool.query("SELECT * FROM permissions ORDER BY permission_id ASC");
@@ -62,7 +61,7 @@ async function getAllPermissions() {
   }
 }
 
-// Get user permissions based on their role
+
 async function getUserPermissions(user_id) {
   try {
     const [rows] = await pool.query(

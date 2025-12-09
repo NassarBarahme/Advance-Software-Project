@@ -38,16 +38,16 @@ exports.getAllCases = async (req, res) => {
     
     let params = [];
     
-    // Filter based on role
+    
     if (role === 'patient') {
-      // Patients see only their own cases
+      
       query += ` WHERE mc.patient_id = ?`;
       params.push(userId);
     } else if (role === 'donor' || role === 'ngo') {
-      // Donors and NGOs see active cases that need funding
+      
       query += ` WHERE mc.case_status IN ('active', 'in_treatment')`;
     }
-    // Admin sees all cases (no WHERE clause)
+
     
     query += ` ORDER BY mc.created_at DESC`;
     

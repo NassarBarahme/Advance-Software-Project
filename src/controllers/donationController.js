@@ -2,7 +2,7 @@
 const donationModel = require("../models/donationModel");
 const pool = require("../config/database");
 
-// Get all donations (user sees their own donations, admin sees all)
+
 exports.getAllDonations = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -15,7 +15,7 @@ exports.getAllDonations = async (req, res) => {
     
     let params = [];
     
-    // Non-admin users only see their own donations
+    
     if (role !== 'admin') {
       query += ` WHERE d.donor_id = ?`;
       params.push(userId);

@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { addInventory, getInventoryById, updateInventory, getAllInventory, deleteInventory } = require("../controllers/medicalInventoryController");
 
-// Get all inventory items
+
 router.get("/", authenticateToken, getAllInventory);
 
 router.post("/", authenticateToken, addInventory);

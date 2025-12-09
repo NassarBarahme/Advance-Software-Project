@@ -202,7 +202,7 @@ async function sendMessageController(req, res) {
   }
 }
 
-// Get all consultations (user sees their own consultations)
+
 async function getAllConsultationsController(req, res) {
   try {
     const userId = req.user.user_id;
@@ -218,7 +218,6 @@ async function getAllConsultationsController(req, res) {
     
     let params = [];
     
-    // Filter based on role
     if (role === 'patient') {
       query += ` WHERE c.patient_id = ?`;
       params.push(userId);
@@ -226,7 +225,7 @@ async function getAllConsultationsController(req, res) {
       query += ` WHERE c.doctor_id = ? OR c.doctor_id IS NULL`;
       params.push(userId);
     } else if (role !== 'admin') {
-      // Other roles see only their consultations
+      
       query += ` WHERE c.patient_id = ? OR c.doctor_id = ?`;
       params.push(userId, userId);
     }

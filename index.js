@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -29,7 +29,6 @@ const ngoRoutes = require('./src/routes/ngoRoutes');
 const staffRoutes = require('./src/routes/staffRoutes');
 const consultationsRoutes = require('./src/routes/consultationsRoutes');
 const systemRoutes = require('./src/routes/systemRoutes');
-const rolesRoutes = require('./src/routes/rolesRoutes');
 
 app.use(helmet());
 app.use(cors());
@@ -47,30 +46,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-app.use('/api/medical-cases', medicalCaseRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/donations', donationRoutes);
-app.use('/api/medical_inventory', medicalInventoryRoutes);
-app.use('/api/medication_requests', medicationRequestRoutes);
-app.use('/api/delivery_matches', deliveryMatchRoutes);
-app.use("/api/mental_health_sessions", mentalHealthRoutes);
-app.use("/api/support_groups", supportGroupRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/ngos', ngoRoutes);
-app.use('/api/staff', staffRoutes);
-app.use('/api/consultations',consultationsRoutes);
-app.use('/api/system', systemRoutes);
-app.use('/api/roles', rolesRoutes);
-
-
-
-
-
-
-=======
 app.get('/api', (req, res) => {
   res.json({
     message: ' Welcome to HealthPal API',
@@ -83,7 +58,6 @@ app.get('/api', (req, res) => {
     }
   });
 });
->>>>>>> e3b5679604f5957f25a448f7f70053affbc10eba
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
