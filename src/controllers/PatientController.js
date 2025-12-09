@@ -177,6 +177,43 @@ class PatientController {
       return ResponseHelper.error(res, error.message, 500);
     }
   }
+
+  /**
+   * POST /patients/:patient_id/profiles - Create patient fundraising profile
+   */
+  static async createPatientProfile(req, res) {
+    try {
+      const { patient_id } = req.params;
+      const { goal_amount, story, status } = req.body;
+
+      // Check patient exists
+      const exists = await PatientModel.getById(patient_id);
+      if (!exists) {
+        return ResponseHelper.notFound(res, 'Patient not found');
+      }
+
+      // Basic validation
+      if (!goal_amount && !story) {
+        return ResponseHelper.error(res, 'Goal amount or story is required', 400);
+      }
+
+      const validStatus = ['active', 'completed', 'paused'];
+      if (status && !validStatus.includes(status)) {
+        return ResponseHelper.error(res, 'Invalid status value', 400);
+      }
+
+      const profile = await PatientModel.createProfile(patient_id, {
+        goal_amount,
+        story,
+        status
+      });
+
+      return ResponseHelper.success(res, profile, 'Patient profile created successfully', 201);
+    } catch (error) {
+      console.error('❌ Error in createPatientProfile:', error);
+      return ResponseHelper.error(res, error.message, 500);
+    }
+  }
 }
 
 module.exports = PatientController;

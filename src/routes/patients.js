@@ -20,6 +20,8 @@ router.post('/', authenticateToken, requireAnyRole('admin', 'patient'), PatientC
 
 router.get('/:patient_id/profiles', PatientController.getPatientProfiles);
 
+router.post('/:patient_id/profiles', authenticateToken, requireAnyRole('admin', 'patient'), PatientController.createPatientProfile);
+
 
 router.get('/:patient_id', PatientController.getPatientById);
 

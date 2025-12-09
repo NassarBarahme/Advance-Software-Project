@@ -25,7 +25,7 @@ class HealthAlertModel {
         alert_content,
         alert_type,
         severity_level || 'info',
-        affected_areas ? JSON.stringify(affected_areas) : null,
+        affected_areas ? (typeof affected_areas === 'string' ? affected_areas : JSON.stringify(affected_areas)) : null,
         is_active !== undefined ? is_active : true,
         expires_at,
         created_by
@@ -46,8 +46,22 @@ class HealthAlertModel {
       [alertId]
     );
     
-    if (rows[0] && rows[0].affected_areas) {
-      rows[0].affected_areas = JSON.parse(rows[0].affected_areas);
+    if (rows[0] && rows[0].affected_areas !== null && rows[0].affected_areas !== undefined) {
+      try {
+        // MySQL JSON column may return as object/array directly, or as string
+        if (typeof rows[0].affected_areas === 'string') {
+          // Only parse if it's a valid JSON string
+          const trimmed = rows[0].affected_areas.trim();
+          if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+            rows[0].affected_areas = JSON.parse(rows[0].affected_areas);
+          }
+        }
+        // If it's already an object/array, leave it as is
+      } catch (error) {
+        // If parsing fails, set to null
+        console.error('Error parsing affected_areas:', error);
+        rows[0].affected_areas = null;
+      }
     }
     
     return rows[0];
@@ -99,8 +113,22 @@ class HealthAlertModel {
     
     // Parse JSON fields
     rows.forEach(row => {
-      if (row.affected_areas) {
-        row.affected_areas = JSON.parse(row.affected_areas);
+      if (row.affected_areas !== null && row.affected_areas !== undefined) {
+        try {
+          // MySQL JSON column may return as object/array directly, or as string
+          if (typeof row.affected_areas === 'string') {
+            // Only parse if it's a valid JSON string
+            const trimmed = row.affected_areas.trim();
+            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+              row.affected_areas = JSON.parse(row.affected_areas);
+            }
+          }
+          // If it's already an object/array, leave it as is
+        } catch (error) {
+          // If parsing fails, set to null
+          console.error('Error parsing affected_areas:', error);
+          row.affected_areas = null;
+        }
       }
     });
     

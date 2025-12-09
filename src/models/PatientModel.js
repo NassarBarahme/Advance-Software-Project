@@ -148,6 +148,41 @@ class PatientModel {
 
     return rows;
   }
+
+  /**
+   * Create patient fundraising profile
+   */
+  static async createProfile(patientId, data) {
+    const {
+      goal_amount,
+      story,
+      status
+    } = data;
+
+    const [result] = await pool.query(
+      `INSERT INTO patient_profiles
+       (patient_id, goal_amount, current_amount, story, status)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        patientId,
+        goal_amount || null,
+        0,
+        story || null,
+        status || 'active'
+      ]
+    );
+
+    const [rows] = await pool.query(
+      `SELECT pp.*, u.full_name as patient_name
+       FROM patient_profiles pp
+       INNER JOIN patients p ON pp.patient_id = p.patient_id
+       INNER JOIN users u ON p.patient_id = u.user_id
+       WHERE pp.profile_id = ?`,
+      [result.insertId]
+    );
+
+    return rows[0];
+  }
 }
 
 module.exports = PatientModel;
