@@ -82,6 +82,12 @@ class PatientController {
   static async getPatientById(req, res) {
     try {
       const { patient_id } = req.params;
+      const userId = req.user?.user_id;
+
+      // Check if user is accessing their own data or is admin
+      if (req.user?.role !== 'admin' && parseInt(patient_id) !== parseInt(userId)) {
+        return ResponseHelper.error(res, 'Access denied: You can only view your own patient data', 403);
+      }
 
       const patient = await PatientModel.getById(patient_id);
       if (!patient) {
@@ -150,6 +156,12 @@ class PatientController {
   static async getPatientProfiles(req, res) {
     try {
       const { patient_id } = req.params;
+      const userId = req.user?.user_id;
+
+      // Check if user is accessing their own data or is admin
+      if (req.user?.role !== 'admin' && parseInt(patient_id) !== parseInt(userId)) {
+        return ResponseHelper.error(res, 'Access denied: You can only view your own profiles', 403);
+      }
 
       const exists = await PatientModel.getById(patient_id);
       if (!exists) {
@@ -170,6 +182,12 @@ class PatientController {
     try {
       const { patient_id } = req.params;
       const { goal_amount, story, status } = req.body;
+      const userId = req.user?.user_id;
+
+      // Check if user is creating profile for themselves or is admin
+      if (req.user?.role !== 'admin' && parseInt(patient_id) !== parseInt(userId)) {
+        return ResponseHelper.error(res, 'Access denied: You can only create profiles for yourself', 403);
+      }
 
       const exists = await PatientModel.getById(patient_id);
       if (!exists) {

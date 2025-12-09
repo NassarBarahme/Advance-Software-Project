@@ -10,7 +10,55 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
   // Load user permissions on startup
   loadUserPermissions();
+  
+  // Setup button event listeners for buttons in HTML
+  setupButtonListeners();
 });
+
+// Setup button event listeners for buttons defined in HTML
+function setupButtonListeners() {
+  // Edit Medical History button
+  const editMedicalHistoryBtn = document.querySelector('#page-medical-history .page-header .btn-primary');
+  if (editMedicalHistoryBtn && !editMedicalHistoryBtn.hasAttribute('data-listener-attached')) {
+    editMedicalHistoryBtn.setAttribute('data-listener-attached', 'true');
+    editMedicalHistoryBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (typeof showEditMedicalHistoryModal === 'function') {
+        showEditMedicalHistoryModal();
+      } else if (typeof window.showEditMedicalHistoryModal === 'function') {
+        window.showEditMedicalHistoryModal();
+      }
+    });
+  }
+  
+  // New Profile button
+  const newProfileBtn = document.querySelector('#page-patient-profiles .page-header .btn-primary');
+  if (newProfileBtn && !newProfileBtn.hasAttribute('data-listener-attached')) {
+    newProfileBtn.setAttribute('data-listener-attached', 'true');
+    newProfileBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (typeof showAddPatientProfileModal === 'function') {
+        showAddPatientProfileModal();
+      } else if (typeof window.showAddPatientProfileModal === 'function') {
+        window.showAddPatientProfileModal();
+      }
+    });
+  }
+  
+  // New Group button
+  const newGroupBtn = document.querySelector('#page-support-groups .page-header .btn-primary');
+  if (newGroupBtn && !newGroupBtn.hasAttribute('data-listener-attached')) {
+    newGroupBtn.setAttribute('data-listener-attached', 'true');
+    newGroupBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (typeof showAddSupportGroupModal === 'function') {
+        showAddSupportGroupModal();
+      } else if (typeof window.showAddSupportGroupModal === 'function') {
+        window.showAddSupportGroupModal();
+      }
+    });
+  }
+}
 
 // Check Authentication
 function checkAuth() {
@@ -108,6 +156,11 @@ function navigateToPage(pageName) {
     targetPage.classList.add('active');
     updatePageTitle(pageName);
     loadPageData(pageName);
+    
+    // Setup button listeners after page loads
+    setTimeout(() => {
+      setupButtonListeners();
+    }, 100);
   }
 }
 
@@ -116,12 +169,16 @@ function updatePageTitle(pageName) {
   const titles = {
     'dashboard': 'Dashboard',
     'profile': 'Profile',
+    'medical-history': 'Medical History',
     'medical-cases': 'Medical Cases',
+    'patient-profiles': 'My Profiles',
     'consultations': 'Consultations',
     'donations': 'Donations',
     'medication-requests': 'Medication Requests',
     'mental-health': 'Mental Health',
     'support-groups': 'Support Groups',
+    'health-content': 'Health Content',
+    'health-alerts': 'Health Alerts',
     'ngos': 'NGOs',
     'medical-inventory': 'Medical Inventory',
     'users': 'Users',
@@ -139,8 +196,14 @@ function loadPageData(pageName) {
     case 'profile':
       loadProfile();
       break;
+    case 'medical-history':
+      loadMedicalHistory();
+      break;
     case 'medical-cases':
       loadMedicalCases();
+      break;
+    case 'patient-profiles':
+      loadPatientProfiles();
       break;
     case 'consultations':
       loadConsultations();
@@ -156,6 +219,12 @@ function loadPageData(pageName) {
       break;
     case 'support-groups':
       loadSupportGroups();
+      break;
+    case 'health-content':
+      loadHealthContent();
+      break;
+    case 'health-alerts':
+      loadHealthAlerts();
       break;
     case 'ngos':
       loadNGOs();
@@ -199,14 +268,36 @@ async function getDashboardStats() {
       try {
         const response = await apiCall('/medical-cases', 'GET');
         const cases = response?.cases || (Array.isArray(response) ? response : []);
+        const totalRaised = Array.isArray(cases) ? cases.reduce((sum, c) => sum + (parseFloat(c.raised_amount) || 0), 0) : 0;
         stats.push({
           icon: '🏥',
           title: 'My Medical Cases',
           value: Array.isArray(cases) ? cases.length : 0,
           color: '#3498db'
         });
+        if (totalRaised > 0) {
+          stats.push({
+            icon: '💰',
+            title: 'Total Raised',
+            value: totalRaised.toFixed(2) + ' USD',
+            color: '#27ae60'
+          });
+        }
       } catch (e) {
         stats.push({ icon: '🏥', title: 'My Medical Cases', value: 0, color: '#3498db' });
+      }
+
+      try {
+        const response = await apiCall('/consultations', 'GET');
+        const consultations = response?.consultations || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '💬',
+          title: 'Consultations',
+          value: Array.isArray(consultations) ? consultations.length : 0,
+          color: '#9b59b6'
+        });
+      } catch (e) {
+        stats.push({ icon: '💬', title: 'Consultations', value: 0, color: '#9b59b6' });
       }
 
       try {
@@ -228,10 +319,23 @@ async function getDashboardStats() {
           icon: '🧠',
           title: 'Mental Health Sessions',
           value: Array.isArray(sessions) ? sessions.length : 0,
-        color: '#9b59b6'
-      });
+          color: '#9b59b6'
+        });
       } catch (e) {
         stats.push({ icon: '🧠', title: 'Mental Health Sessions', value: 0, color: '#9b59b6' });
+      }
+
+      try {
+        const response = await apiCall(`/patients/${currentUser.user_id}/profiles`, 'GET');
+        const profiles = response?.data || (Array.isArray(response) ? response : []);
+        stats.push({
+          icon: '📝',
+          title: 'My Profiles',
+          value: Array.isArray(profiles) ? profiles.length : 0,
+          color: '#16a085'
+        });
+      } catch (e) {
+        stats.push({ icon: '📝', title: 'My Profiles', value: 0, color: '#16a085' });
       }
     } else if (role === 'doctor') {
       try {
@@ -381,28 +485,82 @@ function getQuickActions() {
 
   if (role === 'patient') {
     actions.push({
+      icon: '📋',
+      title: 'Medical History',
+      description: 'View and edit your medical history',
+      action: function() { navigateToPage('medical-history'); }
+    });
+    actions.push({
       icon: '🏥',
       title: 'Add Medical Case',
       description: 'Create a new medical case',
-      action: () => showAddMedicalCaseModal()
+      action: function() { 
+        if (typeof showAddMedicalCaseModal === 'function') {
+          showAddMedicalCaseModal();
+        } else if (typeof window.showAddMedicalCaseModal === 'function') {
+          window.showAddMedicalCaseModal();
+        }
+      }
+    });
+    actions.push({
+      icon: '📝',
+      title: 'Create Profile',
+      description: 'Create a new patient profile',
+      action: function() { 
+        if (typeof showAddPatientProfileModal === 'function') {
+          showAddPatientProfileModal();
+        } else if (typeof window.showAddPatientProfileModal === 'function') {
+          window.showAddPatientProfileModal();
+        }
+      }
     });
     actions.push({
       icon: '💬',
       title: 'New Consultation',
       description: 'Request a consultation from a doctor',
-      action: () => showAddConsultationModal()
+      action: function() { 
+        if (typeof showAddConsultationModal === 'function') {
+          showAddConsultationModal();
+        } else if (typeof window.showAddConsultationModal === 'function') {
+          window.showAddConsultationModal();
+        }
+      }
     });
     actions.push({
       icon: '💊',
       title: 'Request Medication',
       description: 'Request medication from pharmacy',
-      action: () => showAddMedicationRequestModal()
+      action: function() { 
+        if (typeof showAddMedicationRequestModal === 'function') {
+          showAddMedicationRequestModal();
+        } else if (typeof window.showAddMedicationRequestModal === 'function') {
+          window.showAddMedicationRequestModal();
+        }
+      }
     });
     actions.push({
       icon: '🧠',
       title: 'Mental Health Session',
       description: 'Book a mental health session',
-      action: () => showAddMentalHealthSessionModal()
+      action: function() { 
+        if (typeof showAddMentalHealthSessionModal === 'function') {
+          showAddMentalHealthSessionModal();
+        } else if (typeof window.showAddMentalHealthSessionModal === 'function') {
+          window.showAddMentalHealthSessionModal();
+        }
+      }
+    });
+    actions.push({
+      icon: '📚',
+      title: 'Health Content',
+      description: 'Browse health information',
+      action: function() { navigateToPage('health-content'); }
+    });
+    actions.push({
+      icon: '🔔',
+      title: 'Health Alerts',
+      description: 'View health alerts',
+      action: function() { navigateToPage('health-alerts'); }
     });
   } else if (role === 'doctor') {
     actions.push({
@@ -469,13 +627,39 @@ function getQuickActions() {
 
 // Display Quick Actions
 function displayQuickActions(actions, container) {
-  container.innerHTML = actions.map(action => `
-    <div class="action-card" onclick="(${action.action})()">
+  if (!container || !actions || actions.length === 0) {
+    return;
+  }
+  
+  container.innerHTML = actions.map((action, index) => `
+    <div class="action-card" data-action-index="${index}">
       <div class="action-card-icon">${action.icon}</div>
       <h4>${action.title}</h4>
       <p>${action.description}</p>
     </div>
   `).join('');
+  
+  // Store actions in container for later access
+  container._quickActions = actions;
+  
+  // Attach event listeners to action cards
+  container.querySelectorAll('.action-card').forEach((card, index) => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const actionIndex = parseInt(this.getAttribute('data-action-index'));
+      const storedActions = container._quickActions || actions;
+      if (storedActions[actionIndex] && typeof storedActions[actionIndex].action === 'function') {
+        try {
+          storedActions[actionIndex].action();
+        } catch (error) {
+          console.error('Error executing quick action:', error);
+          showMessage('Error executing action: ' + (error.message || 'Unknown error'), 'error');
+        }
+      }
+    });
+  });
 }
 
 // Load User Permissions
@@ -931,11 +1115,22 @@ async function loadSupportGroups() {
   if (!container) return;
 
   try {
-    // Note: There's no GET all support groups endpoint in the backend
-    // This would need to be added to the backend routes
     const response = await apiCall('/support_groups', 'GET').catch(() => null);
-    if (response && Array.isArray(response)) {
-      displaySupportGroups(response, container);
+    let groups = [];
+    
+    // Handle different response formats
+    if (response) {
+      if (Array.isArray(response)) {
+        groups = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        groups = response.data;
+      } else if (response.groups && Array.isArray(response.groups)) {
+        groups = response.groups;
+      }
+    }
+    
+    if (groups && groups.length > 0) {
+      displaySupportGroups(groups, container);
     } else {
       container.innerHTML = '<p style="text-align: center; padding: 40px;">No support groups available. Use the "New Group" button to create a support group.</p>';
     }
@@ -946,23 +1141,269 @@ async function loadSupportGroups() {
       container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data. Please try again later.</p>';
     }
   }
+  
+  // Setup button listeners after loading
+  setTimeout(() => {
+    setupButtonListeners();
+  }, 100);
 }
 
 // Display Support Groups
 function displaySupportGroups(groups, container) {
   if (!groups || groups.length === 0) {
-    container.innerHTML = '<p style="text-align: center; padding: 40px;">No groups</p>';
+    container.innerHTML = '<p style="text-align: center; padding: 40px;">No support groups available. Use the "New Group" button to create a support group.</p>';
     return;
   }
 
   container.innerHTML = groups.map(group => `
-    <div class="group-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">${group.group_name || 'Support Group'}</div>
-          <div class="card-meta">Type: ${group.group_type || 'Not specified'} | Members: ${group.current_members || 0}/${group.max_members || 20}</div>
-          <div class="card-meta">${group.description || ''}</div>
+    <div class="group-card" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+        <div style="flex: 1;">
+          <div class="card-title" style="font-size: 1.2rem; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">${group.group_name || 'Support Group'}</div>
+          <div class="card-meta" style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 5px;">
+            <strong>Type:</strong> ${group.group_type ? group.group_type.charAt(0).toUpperCase() + group.group_type.slice(1) : 'Not specified'} | 
+            <strong>Members:</strong> ${group.current_members || 0}/${group.max_members || 20}
+          </div>
+          ${group.description ? `<div class="card-meta" style="font-size: 0.9rem; color: #666; margin-top: 10px; line-height: 1.6;">${group.description}</div>` : ''}
+          ${group.meeting_schedule ? `<div class="card-meta" style="font-size: 0.85rem; color: #3498db; margin-top: 8px;">📅 ${group.meeting_schedule}</div>` : ''}
+          <div class="card-meta" style="font-size: 0.85rem; color: #999; margin-top: 10px;">
+            Created: ${formatDate(group.created_at)}
+          </div>
         </div>
+        <span class="status-badge status-${group.is_active ? 'active' : 'inactive'}" style="padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; display: inline-block;">
+          ${group.is_active ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Load Medical History
+async function loadMedicalHistory() {
+  const container = document.getElementById('medical-history-container');
+  if (!container) return;
+
+  try {
+    const patient = await apiCall(`/patients/${currentUser.user_id}`, 'GET');
+    if (patient) {
+      displayMedicalHistory(patient, container);
+    } else {
+      container.innerHTML = '<p style="text-align: center; padding: 40px;">No medical history found. Click "Edit Medical History" to add your information.</p>';
+    }
+  } catch (error) {
+    console.error('Error loading medical history:', error);
+    // If patient not found, show message to create one
+    if (error.message && error.message.includes('not found')) {
+      container.innerHTML = '<p style="text-align: center; padding: 40px;">No medical history found. Click "Edit Medical History" to create your patient profile.</p>';
+    } else {
+      showMessage('Error loading medical history: ' + (error.message || 'Unknown error'), 'error');
+      if (container) {
+        container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data. Please try again later.</p>';
+      }
+    }
+  }
+  
+  // Setup button listeners after loading
+  setTimeout(() => {
+    setupButtonListeners();
+  }, 100);
+}
+
+// Display Medical History
+function displayMedicalHistory(patient, container) {
+  const medicalHistory = patient.medical_history || {};
+  const chronicConditions = patient.chronic_conditions || {};
+  
+  container.innerHTML = `
+    <div class="medical-history-card" style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+      <h3 style="margin-bottom: 20px; color: #2c3e50;">Personal Information</h3>
+      <div class="info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div>
+          <strong>Blood Type:</strong>
+          <p style="margin-top: 5px; color: #666;">${patient.blood_type || 'Not specified'}</p>
+        </div>
+        <div>
+          <strong>Date of Birth:</strong>
+          <p style="margin-top: 5px; color: #666;">${patient.date_of_birth ? formatDate(patient.date_of_birth) : 'Not specified'}</p>
+        </div>
+        <div>
+          <strong>Gender:</strong>
+          <p style="margin-top: 5px; color: #666;">${patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'Not specified'}</p>
+        </div>
+        <div>
+          <strong>Phone Number:</strong>
+          <p style="margin-top: 5px; color: #666;">${patient.phone_number || 'Not specified'}</p>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 20px; color: #2c3e50; margin-top: 30px;">Medical History</h3>
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        ${Object.keys(medicalHistory).length > 0 
+          ? Object.entries(medicalHistory).map(([key, value]) => `
+              <div style="margin-bottom: 15px;">
+                <strong>${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
+                <p style="margin-top: 5px; color: #666;">${typeof value === 'object' ? JSON.stringify(value, null, 2) : value}</p>
+              </div>
+            `).join('')
+          : '<p style="color: #999;">No medical history recorded yet.</p>'
+        }
+      </div>
+
+      <h3 style="margin-bottom: 20px; color: #2c3e50; margin-top: 30px;">Chronic Conditions</h3>
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+        ${Object.keys(chronicConditions).length > 0
+          ? Object.entries(chronicConditions).map(([key, value]) => `
+              <div style="margin-bottom: 15px;">
+                <strong>${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
+                <p style="margin-top: 5px; color: #666;">${typeof value === 'object' ? JSON.stringify(value, null, 2) : value}</p>
+              </div>
+            `).join('')
+          : '<p style="color: #999;">No chronic conditions recorded.</p>'
+        }
+      </div>
+    </div>
+  `;
+}
+
+// Load Patient Profiles
+async function loadPatientProfiles() {
+  const container = document.getElementById('patient-profiles-grid');
+  if (!container) return;
+
+  try {
+    const profiles = await apiCall(`/patients/${currentUser.user_id}/profiles`, 'GET');
+    const profilesArray = Array.isArray(profiles) ? profiles : (profiles?.data ? profiles.data : []);
+    displayPatientProfiles(profilesArray, container);
+  } catch (error) {
+    console.error('Error loading patient profiles:', error);
+    showMessage('Error loading patient profiles: ' + (error.message || 'Unknown error'), 'error');
+    if (container) {
+      container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data. Please try again later.</p>';
+    }
+  }
+  
+  // Setup button listeners after loading
+  setTimeout(() => {
+    setupButtonListeners();
+  }, 100);
+}
+
+// Display Patient Profiles
+function displayPatientProfiles(profiles, container) {
+  if (!profiles || profiles.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 40px; grid-column: 1/-1;">No profiles found. Create your first profile to get started.</p>';
+    return;
+  }
+
+  container.innerHTML = profiles.map(profile => `
+    <div class="profile-card" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #2c3e50;">Profile #${profile.profile_id}</h3>
+        <span class="status-badge status-${profile.status || 'active'}">${getStatusText(profile.status || 'active')}</span>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Goal Amount:</strong>
+        <p style="margin-top: 5px; color: #666; font-size: 1.2em; font-weight: bold;">${profile.goal_amount ? parseFloat(profile.goal_amount).toFixed(2) : '0.00'} USD</p>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Current Amount:</strong>
+        <p style="margin-top: 5px; color: #27ae60; font-size: 1.2em; font-weight: bold;">${profile.current_amount ? parseFloat(profile.current_amount).toFixed(2) : '0.00'} USD</p>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Progress:</strong>
+        <div style="background: #e0e0e0; border-radius: 10px; height: 20px; margin-top: 5px; overflow: hidden;">
+          <div style="background: #27ae60; height: 100%; width: ${profile.goal_amount && parseFloat(profile.goal_amount) > 0 ? Math.min((parseFloat(profile.current_amount || 0) / parseFloat(profile.goal_amount)) * 100, 100) : 0}%; transition: width 0.3s ease;"></div>
+        </div>
+        <p style="margin-top: 5px; color: #666; font-size: 0.9em;">
+          ${profile.goal_amount && parseFloat(profile.goal_amount) > 0 
+            ? Math.round((parseFloat(profile.current_amount || 0) / parseFloat(profile.goal_amount)) * 100) 
+            : 0}% Complete
+        </p>
+      </div>
+      ${profile.story ? `
+        <div style="margin-bottom: 15px;">
+          <strong>Story:</strong>
+          <p style="margin-top: 5px; color: #666; line-height: 1.6;">${profile.story}</p>
+        </div>
+      ` : ''}
+      <div style="color: #999; font-size: 0.85em; margin-top: 15px;">
+        Created: ${formatDate(profile.created_at)}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Load Health Content
+async function loadHealthContent() {
+  const container = document.getElementById('health-content-grid');
+  if (!container) return;
+
+  try {
+    const content = await apiCall('/health_content', 'GET');
+    const contentArray = Array.isArray(content) ? content : (content?.data ? content.data : []);
+    displayHealthContent(contentArray, container);
+  } catch (error) {
+    console.error('Error loading health content:', error);
+    showMessage('Error loading health content: ' + (error.message || 'Unknown error'), 'error');
+    if (container) {
+      container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data. Please try again later.</p>';
+    }
+  }
+}
+
+// Display Health Content
+function displayHealthContent(content, container) {
+  if (!content || content.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 40px; grid-column: 1/-1;">No health content available.</p>';
+    return;
+  }
+
+  container.innerHTML = content.map(item => `
+    <div class="content-card" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="margin: 0 0 10px 0; color: #2c3e50;">${item.title || 'Health Content'}</h3>
+      <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">${item.content || item.description || 'No description available.'}</p>
+      ${item.category ? `<span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 16px; font-size: 0.85em; display: inline-block; margin-bottom: 10px;">${item.category}</span>` : ''}
+      <div style="color: #999; font-size: 0.85em; margin-top: 15px;">
+        ${item.created_at ? `Published: ${formatDate(item.created_at)}` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Load Health Alerts
+async function loadHealthAlerts() {
+  const container = document.getElementById('health-alerts-list');
+  if (!container) return;
+
+  try {
+    const alerts = await apiCall('/health_alerts', 'GET');
+    const alertsArray = Array.isArray(alerts) ? alerts : (alerts?.data ? alerts.data : []);
+    displayHealthAlerts(alertsArray, container);
+  } catch (error) {
+    console.error('Error loading health alerts:', error);
+    showMessage('Error loading health alerts: ' + (error.message || 'Unknown error'), 'error');
+    if (container) {
+      container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data. Please try again later.</p>';
+    }
+  }
+}
+
+// Display Health Alerts
+function displayHealthAlerts(alerts, container) {
+  if (!alerts || alerts.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 40px;">No health alerts at this time.</p>';
+    return;
+  }
+
+  container.innerHTML = alerts.map(alert => `
+    <div class="alert-card" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; border-left: 4px solid ${alert.alert_type === 'urgent' ? '#e74c3c' : alert.alert_type === 'warning' ? '#f39c12' : '#3498db'};">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #2c3e50;">${alert.title || 'Health Alert'}</h3>
+        ${alert.alert_type ? `<span style="background: ${alert.alert_type === 'urgent' ? '#e74c3c' : alert.alert_type === 'warning' ? '#f39c12' : '#3498db'}; color: white; padding: 4px 12px; border-radius: 16px; font-size: 0.85em;">${alert.alert_type.charAt(0).toUpperCase() + alert.alert_type.slice(1)}</span>` : ''}
+      </div>
+      <p style="color: #666; margin-bottom: 10px; line-height: 1.6;">${alert.message || alert.description || 'No description available.'}</p>
+      <div style="color: #999; font-size: 0.85em;">
+        ${alert.created_at ? `Published: ${formatDate(alert.created_at)}` : ''}
       </div>
     </div>
   `).join('');
@@ -1300,7 +1741,14 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     throw new Error(result.message || 'Request error');
   }
 
-  return result.data || result;
+  // Handle different response formats
+  // ResponseHelper returns: {success: true, message: "...", data: ...}
+  // Some endpoints might return data directly
+  if (result.success !== undefined) {
+    return result.data !== undefined ? result.data : result;
+  }
+  
+  return result.data !== undefined ? result.data : result;
 }
 
 // Show Message
@@ -1431,7 +1879,7 @@ function showModal(title, content) {
     <div class="modal">
       <div class="modal-header">
         <h3>${title}</h3>
-        <button class="modal-close" onclick="closeModal()">×</button>
+        <button class="modal-close" id="modal-close-btn">×</button>
       </div>
       <div class="modal-body">
         ${content}
@@ -1439,6 +1887,60 @@ function showModal(title, content) {
     </div>
   `;
   overlay.classList.add('active');
+  
+  // Setup close button listener
+  setTimeout(() => {
+    const closeBtn = document.getElementById('modal-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      });
+    }
+    
+    // Setup all Cancel/Close buttons in the modal - more comprehensive approach
+    const allButtons = overlay.querySelectorAll('button');
+    allButtons.forEach(btn => {
+      const btnText = btn.textContent.trim().toLowerCase();
+      const hasOnclickClose = btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('closeModal');
+      const isCancelBtn = btnText === 'cancel' || btnText === 'close' || btnText === '×' || btn.classList.contains('modal-cancel-btn') || btn.classList.contains('modal-close');
+      
+      if (hasOnclickClose || isCancelBtn) {
+        // Remove onclick attribute to prevent conflicts
+        btn.removeAttribute('onclick');
+        // Remove any existing listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        // Add new listener
+        if (!newBtn.hasAttribute('data-close-listener')) {
+          newBtn.setAttribute('data-close-listener', 'true');
+          newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+          });
+        }
+      }
+    });
+    
+    // Also setup Cancel buttons using a more aggressive approach - second pass
+    setTimeout(() => {
+      overlay.querySelectorAll('button').forEach(btn => {
+        const btnText = btn.textContent.trim().toLowerCase();
+        if ((btnText === 'cancel' || btnText === 'close') && !btn.hasAttribute('data-close-listener')) {
+          btn.setAttribute('data-close-listener', 'true');
+          btn.removeAttribute('onclick');
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+          }, true); // Use capture phase
+        }
+      });
+    }, 50);
+  }, 10);
   
   // Close modal when clicking on overlay (but not on modal content)
   overlay.onclick = (e) => {
@@ -1455,77 +1957,122 @@ function showModal(title, content) {
       e.stopPropagation();
     };
   }
+  
 }
 
 function closeModal() {
   const overlay = document.getElementById('modal-overlay');
   if (overlay) {
     overlay.classList.remove('active');
+    // Clear all event listeners by removing and re-adding overlay
+    const parent = overlay.parentNode;
+    const newOverlay = overlay.cloneNode(false);
+    parent.replaceChild(newOverlay, overlay);
+    // Clear overlay content
+    setTimeout(() => {
+      newOverlay.innerHTML = '';
+    }, 300);
   }
 }
 
 // Add Medical Case Modal
 function showAddMedicalCaseModal() {
   const content = `
-    <form id="add-medical-case-form" onsubmit="handleAddMedicalCase(event)">
+    <form id="add-medical-case-form">
       <div class="form-group">
         <label>Case Title *</label>
-        <input type="text" name="case_title" required>
+        <input type="text" name="case_title" required placeholder="e.g., Heart Surgery Fund">
       </div>
       <div class="form-group">
         <label>Case Description *</label>
-        <textarea name="case_description" rows="4" required></textarea>
+        <textarea name="case_description" rows="4" required placeholder="Describe your medical case and why you need funding..."></textarea>
       </div>
       <div class="form-group">
-        <label>Target Amount *</label>
-        <input type="number" name="target_amount" step="0.01" min="0" required>
+        <label>Target Amount (USD) *</label>
+        <input type="number" name="target_amount" step="0.01" min="0" required placeholder="0.00">
       </div>
       <div class="form-group">
         <label>Medical Condition</label>
-        <input type="text" name="medical_condition">
+        <input type="text" name="medical_condition" placeholder="e.g., Heart Disease, Cancer, etc.">
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="button" class="btn btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Case</button>
       </div>
     </form>
   `;
   showModal('Add New Medical Case', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-medical-case-form');
+    if (form) {
+      // Remove any existing listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      // Add new listener
+      document.getElementById('add-medical-case-form').addEventListener('submit', handleAddMedicalCase);
+    }
+  }, 100);
 }
 
 async function handleAddMedicalCase(e) {
   e.preventDefault();
+  e.stopPropagation();
   
   // Check permission (if permissions are loaded)
   if (userPermissions.length > 0 && !hasPermission('create_medical_case') && currentUser?.role !== 'patient') {
     showMessage('You do not have permission to create medical cases', 'error');
-    return;
+    return false;
   }
 
   const formData = new FormData(e.target);
+  
+  // Validate required fields
+  const caseTitle = formData.get('case_title');
+  const caseDescription = formData.get('case_description');
+  const targetAmount = formData.get('target_amount');
+  
+  if (!caseTitle || !caseDescription || !targetAmount) {
+    showMessage('Please fill in all required fields', 'error');
+    return false;
+  }
+  
   const data = {
     patient_id: currentUser.user_id,
-    case_title: formData.get('case_title'),
-    case_description: formData.get('case_description'),
-    target_amount: parseFloat(formData.get('target_amount')),
-    medical_condition: formData.get('medical_condition') || null
+    case_title: caseTitle.trim(),
+    case_description: caseDescription.trim(),
+    target_amount: parseFloat(targetAmount),
+    medical_condition: formData.get('medical_condition')?.trim() || null
   };
 
-  try {
-    await apiCall('/medical-cases', 'POST', data);
-    showMessage('Medical case added successfully', 'success');
-    closeModal();
-    loadMedicalCases();
-    loadDashboard();
-  } catch (error) {
-    showMessage('Error adding medical case: ' + (error.message || 'Unknown error'), 'error');
+  // Validate target amount
+  if (isNaN(data.target_amount) || data.target_amount <= 0) {
+    showMessage('Please enter a valid target amount greater than 0', 'error');
+    return false;
   }
+
+  try {
+    const result = await apiCall('/medical-cases', 'POST', data);
+    showMessage('Medical case created successfully!', 'success');
+    closeModal();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadMedicalCases();
+      loadDashboard();
+    }, 500);
+  } catch (error) {
+    console.error('Error creating medical case:', error);
+    showMessage('Error creating medical case: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
 }
 
 // Add Consultation Modal
 function showAddConsultationModal() {
   const content = `
-    <form id="add-consultation-form" onsubmit="handleAddConsultation(event)">
+    <form id="add-consultation-form">
       <div class="form-group">
         <label>Consultation Type *</label>
         <select name="consultation_type" required>
@@ -1545,7 +2092,7 @@ function showAddConsultationModal() {
       </div>
       <div class="form-group">
         <label>Notes</label>
-        <textarea name="notes" rows="3"></textarea>
+        <textarea name="notes" rows="3" placeholder="Any additional notes..."></textarea>
       </div>
       <div class="form-group">
         <label>
@@ -1554,15 +2101,29 @@ function showAddConsultationModal() {
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="submit" class="btn btn-primary">Create Consultation</button>
       </div>
     </form>
   `;
   showModal('Add New Consultation', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-consultation-form');
+    if (form) {
+      // Remove any existing listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      // Add new listener
+      document.getElementById('add-consultation-form').addEventListener('submit', handleAddConsultation);
+    }
+  }, 100);
 }
 
 async function handleAddConsultation(e) {
   e.preventDefault();
+  e.stopPropagation();
+  
   const formData = new FormData(e.target);
   const data = {
     patient_id: currentUser.user_id,
@@ -1575,14 +2136,20 @@ async function handleAddConsultation(e) {
   };
 
   try {
-    await apiCall('/consultations', 'POST', data);
-    showMessage('Consultation added successfully', 'success');
+    const result = await apiCall('/consultations', 'POST', data);
+    showMessage('Consultation created successfully!', 'success');
     closeModal();
-    loadConsultations();
-    loadDashboard();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadConsultations();
+      loadDashboard();
+    }, 500);
   } catch (error) {
-    showMessage('Error adding consultation: ' + (error.message || 'Unknown error'), 'error');
+    console.error('Error creating consultation:', error);
+    showMessage('Error creating consultation: ' + (error.message || 'Unknown error'), 'error');
   }
+  
+  return false;
 }
 
 // Add Donation Modal
@@ -1662,18 +2229,18 @@ async function handleAddDonation(e) {
 // Add Medication Request Modal
 function showAddMedicationRequestModal() {
   const content = `
-    <form id="add-medication-request-form" onsubmit="handleAddMedicationRequest(event)">
+    <form id="add-medication-request-form">
       <div class="form-group">
         <label>Medication Name *</label>
-        <input type="text" name="medication_name" required>
+        <input type="text" name="medication_name" required placeholder="e.g., Aspirin, Paracetamol">
       </div>
       <div class="form-group">
         <label>Quantity Needed *</label>
-        <input type="number" name="quantity_needed" min="1" required>
+        <input type="number" name="quantity_needed" min="1" required placeholder="1">
       </div>
       <div class="form-group">
         <label>Dosage</label>
-        <input type="text" name="dosage">
+        <input type="text" name="dosage" placeholder="e.g., 500mg twice daily">
       </div>
       <div class="form-group">
         <label>Urgency Level</label>
@@ -1686,50 +2253,86 @@ function showAddMedicationRequestModal() {
       </div>
       <div class="form-group">
         <label>Medical Condition (optional)</label>
-        <input type="text" name="medical_condition">
+        <input type="text" name="medical_condition" placeholder="e.g., Heart Disease">
       </div>
       <div class="form-group">
         <label>Related Medical Case ID (optional)</label>
-        <input type="number" name="medical_case_id">
+        <input type="number" name="medical_case_id" placeholder="Enter case ID if related">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="submit" class="btn btn-primary">Create Request</button>
       </div>
     </form>
   `;
   showModal('Add New Medication Request', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-medication-request-form');
+    if (form) {
+      // Remove any existing listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      // Add new listener
+      document.getElementById('add-medication-request-form').addEventListener('submit', handleAddMedicationRequest);
+    }
+  }, 100);
 }
 
 async function handleAddMedicationRequest(e) {
   e.preventDefault();
+  e.stopPropagation();
+  
   const formData = new FormData(e.target);
+  
+  // Validate required fields
+  const medicationName = formData.get('medication_name');
+  const quantityNeeded = formData.get('quantity_needed');
+  
+  if (!medicationName || !quantityNeeded) {
+    showMessage('Please fill in all required fields', 'error');
+    return false;
+  }
+  
   const data = {
     patient_id: currentUser.user_id,
-    medication_name: formData.get('medication_name'),
-    quantity_needed: parseInt(formData.get('quantity_needed')),
-    dosage: formData.get('dosage') || null,
+    medication_name: medicationName.trim(),
+    quantity_needed: parseInt(quantityNeeded),
+    dosage: formData.get('dosage')?.trim() || null,
     urgency_level: formData.get('urgency_level') || 'medium',
-    medical_condition: formData.get('medical_condition') || null,
+    medical_condition: formData.get('medical_condition')?.trim() || null,
     medical_case_id: formData.get('medical_case_id') ? parseInt(formData.get('medical_case_id')) : null,
     request_status: 'open'
   };
 
-  try {
-    await apiCall('/medication_requests', 'POST', data);
-    showMessage('Medication request added successfully', 'success');
-    closeModal();
-    loadMedicationRequests();
-    loadDashboard();
-  } catch (error) {
-    showMessage('Error adding medication request: ' + (error.message || 'Unknown error'), 'error');
+  // Validate quantity
+  if (isNaN(data.quantity_needed) || data.quantity_needed <= 0) {
+    showMessage('Please enter a valid quantity greater than 0', 'error');
+    return false;
   }
+
+  try {
+    const result = await apiCall('/medication_requests', 'POST', data);
+    showMessage('Medication request created successfully!', 'success');
+    closeModal();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadMedicationRequests();
+      loadDashboard();
+    }, 500);
+  } catch (error) {
+    console.error('Error creating medication request:', error);
+    showMessage('Error creating medication request: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
 }
 
 // Add Mental Health Session Modal
 function showAddMentalHealthSessionModal() {
   const content = `
-    <form id="add-mental-health-form" onsubmit="handleAddMentalHealthSession(event)">
+    <form id="add-mental-health-form">
       <div class="form-group">
         <label>Session Type *</label>
         <select name="session_type" required>
@@ -1749,7 +2352,7 @@ function showAddMentalHealthSessionModal() {
       </div>
       <div class="form-group">
         <label>Session Notes</label>
-        <textarea name="session_notes" rows="3"></textarea>
+        <textarea name="session_notes" rows="3" placeholder="Any notes about the session..."></textarea>
       </div>
       <div class="form-group">
         <label>Trauma Type</label>
@@ -1769,45 +2372,65 @@ function showAddMentalHealthSessionModal() {
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="submit" class="btn btn-primary">Create Session</button>
       </div>
     </form>
   `;
   showModal('Add New Mental Health Session', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-mental-health-form');
+    if (form) {
+      // Remove any existing listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      // Add new listener
+      document.getElementById('add-mental-health-form').addEventListener('submit', handleAddMentalHealthSession);
+    }
+  }, 100);
 }
 
 async function handleAddMentalHealthSession(e) {
   e.preventDefault();
+  e.stopPropagation();
+  
   const formData = new FormData(e.target);
   const data = {
     patient_id: currentUser.user_id,
     session_type: formData.get('session_type'),
     scheduled_datetime: formData.get('scheduled_datetime') || null,
     duration_minutes: formData.get('duration_minutes') ? parseInt(formData.get('duration_minutes')) : 60,
-    session_notes: formData.get('session_notes') || null,
+    session_notes: formData.get('session_notes')?.trim() || null,
     trauma_type: formData.get('trauma_type') || null,
     is_anonymous: formData.has('is_anonymous'),
     session_status: 'scheduled'
   };
 
   try {
-    await apiCall('/mental_health_sessions', 'POST', data);
-    showMessage('Mental health session added successfully', 'success');
+    const result = await apiCall('/mental_health_sessions', 'POST', data);
+    showMessage('Mental health session created successfully!', 'success');
     closeModal();
-    loadMentalHealthSessions();
-    loadDashboard();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadMentalHealthSessions();
+      loadDashboard();
+    }, 500);
   } catch (error) {
-    showMessage('Error adding session: ' + (error.message || 'Unknown error'), 'error');
+    console.error('Error creating mental health session:', error);
+    showMessage('Error creating session: ' + (error.message || 'Unknown error'), 'error');
   }
+  
+  return false;
 }
 
 // Add Support Group Modal
 function showAddSupportGroupModal() {
   const content = `
-    <form id="add-support-group-form" onsubmit="handleAddSupportGroup(event)">
+    <form id="add-support-group-form">
       <div class="form-group">
         <label>Group Name *</label>
-        <input type="text" name="group_name" required>
+        <input type="text" name="group_name" required placeholder="e.g., PTSD Support Group">
       </div>
       <div class="form-group">
         <label>Group Type *</label>
@@ -1821,7 +2444,7 @@ function showAddSupportGroupModal() {
       </div>
       <div class="form-group">
         <label>Description *</label>
-        <textarea name="description" rows="4" required></textarea>
+        <textarea name="description" rows="4" required placeholder="Describe the support group..."></textarea>
       </div>
       <div class="form-group">
         <label>Max Members</label>
@@ -1833,35 +2456,74 @@ function showAddSupportGroupModal() {
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="submit" class="btn btn-primary">Create Group</button>
       </div>
     </form>
   `;
   showModal('Add New Support Group', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-support-group-form');
+    if (form) {
+      // Remove any existing listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      // Add new listener
+      document.getElementById('add-support-group-form').addEventListener('submit', handleAddSupportGroup);
+    }
+  }, 100);
 }
 
 async function handleAddSupportGroup(e) {
   e.preventDefault();
+  e.stopPropagation();
+  
   const formData = new FormData(e.target);
+  
+  // Validate required fields
+  const groupName = formData.get('group_name');
+  const groupType = formData.get('group_type');
+  const description = formData.get('description');
+  
+  if (!groupName || !groupType || !description) {
+    showMessage('Please fill in all required fields', 'error');
+    return false;
+  }
+  
   const data = {
-    group_name: formData.get('group_name'),
-    group_type: formData.get('group_type'),
-    description: formData.get('description'),
+    group_name: groupName.trim(),
+    group_type: groupType,
+    description: description.trim(),
     max_members: formData.get('max_members') ? parseInt(formData.get('max_members')) : 20,
-    meeting_schedule: formData.get('meeting_schedule') || null,
+    meeting_schedule: formData.get('meeting_schedule')?.trim() || null,
     moderator_id: currentUser.user_id,
     current_members: 0,
     is_active: true
   };
 
-  try {
-    await apiCall('/support_groups', 'POST', data);
-    showMessage('Support group added successfully', 'success');
-    closeModal();
-    loadSupportGroups();
-  } catch (error) {
-    showMessage('Error adding support group: ' + (error.message || 'Unknown error'), 'error');
+  // Validate max_members
+  if (isNaN(data.max_members) || data.max_members <= 0) {
+    showMessage('Please enter a valid number of max members', 'error');
+    return false;
   }
+
+  try {
+    const result = await apiCall('/support_groups', 'POST', data);
+    showMessage('Support group created successfully!', 'success');
+    closeModal();
+    // Reload data after a short delay - always reload support groups if on that page
+    setTimeout(() => {
+      // Always reload support groups to show the new group
+      loadSupportGroups();
+      loadDashboard();
+    }, 300);
+  } catch (error) {
+    console.error('Error creating support group:', error);
+    showMessage('Error creating support group: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
 }
 
 // Add NGO Modal
@@ -2391,4 +3053,247 @@ async function deleteInventory(id) {
     }
   }
 }
+
+// Edit Medical History Modal
+async function showEditMedicalHistoryModal() {
+  try {
+    let patient = null;
+    let medicalHistory = {};
+    let chronicConditions = {};
+    let bloodType = '';
+
+    // Try to load existing patient data, but don't fail if it doesn't exist
+    try {
+      patient = await apiCall(`/patients/${currentUser.user_id}`, 'GET');
+      if (patient) {
+        medicalHistory = patient.medical_history || {};
+        chronicConditions = patient.chronic_conditions || {};
+        bloodType = patient.blood_type || '';
+      }
+    } catch (error) {
+      // Patient doesn't exist yet, that's okay - we'll create it
+      console.log('Patient not found, will create new record');
+    }
+    
+    const content = `
+      <form id="edit-medical-history-form">
+        <div class="form-group">
+          <label>Blood Type</label>
+          <select name="blood_type">
+            <option value="">Select</option>
+            <option value="A+" ${bloodType === 'A+' ? 'selected' : ''}>A+</option>
+            <option value="A-" ${bloodType === 'A-' ? 'selected' : ''}>A-</option>
+            <option value="B+" ${bloodType === 'B+' ? 'selected' : ''}>B+</option>
+            <option value="B-" ${bloodType === 'B-' ? 'selected' : ''}>B-</option>
+            <option value="AB+" ${bloodType === 'AB+' ? 'selected' : ''}>AB+</option>
+            <option value="AB-" ${bloodType === 'AB-' ? 'selected' : ''}>AB-</option>
+            <option value="O+" ${bloodType === 'O+' ? 'selected' : ''}>O+</option>
+            <option value="O-" ${bloodType === 'O-' ? 'selected' : ''}>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Medical History (JSON format)</label>
+          <textarea name="medical_history" rows="6" placeholder='{"allergies": "None", "surgeries": "None", "medications": "None"}'>${Object.keys(medicalHistory).length > 0 ? JSON.stringify(medicalHistory, null, 2) : ''}</textarea>
+          <small style="color: #666; font-size: 0.85em;">Enter medical history as JSON object. Example: {"allergies": "Peanuts", "surgeries": "Appendectomy 2020", "medications": "Aspirin"}</small>
+        </div>
+        <div class="form-group">
+          <label>Chronic Conditions (JSON format)</label>
+          <textarea name="chronic_conditions" rows="6" placeholder='{"diabetes": false, "hypertension": false, "asthma": false}'>${Object.keys(chronicConditions).length > 0 ? JSON.stringify(chronicConditions, null, 2) : ''}</textarea>
+          <small style="color: #666; font-size: 0.85em;">Enter chronic conditions as JSON object. Example: {"diabetes": true, "hypertension": false, "asthma": true}</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    `;
+    showModal('Edit Medical History', content);
+    
+    // Attach event listener after modal is shown
+    setTimeout(() => {
+      const form = document.getElementById('edit-medical-history-form');
+      if (form) {
+        // Remove any existing listeners
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        // Add new listener
+        document.getElementById('edit-medical-history-form').addEventListener('submit', handleEditMedicalHistory);
+      }
+    }, 100);
+  } catch (error) {
+    console.error('Error in showEditMedicalHistoryModal:', error);
+    showMessage('Error loading medical history form: ' + (error.message || 'Unknown error'), 'error');
+  }
+}
+
+async function handleEditMedicalHistory(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const formData = new FormData(e.target);
+  
+  let medicalHistory = {};
+  let chronicConditions = {};
+  
+  // Parse medical history JSON
+  try {
+    const medicalHistoryStr = formData.get('medical_history');
+    if (medicalHistoryStr && medicalHistoryStr.trim()) {
+      medicalHistory = JSON.parse(medicalHistoryStr);
+    }
+  } catch (error) {
+    showMessage('Invalid JSON format for medical history. Please check your JSON syntax.', 'error');
+    return;
+  }
+  
+  // Parse chronic conditions JSON
+  try {
+    const chronicConditionsStr = formData.get('chronic_conditions');
+    if (chronicConditionsStr && chronicConditionsStr.trim()) {
+      chronicConditions = JSON.parse(chronicConditionsStr);
+    }
+  } catch (error) {
+    showMessage('Invalid JSON format for chronic conditions. Please check your JSON syntax.', 'error');
+    return;
+  }
+  
+  const data = {
+    patient_id: currentUser.user_id,
+    blood_type: formData.get('blood_type') || null,
+    medical_history: Object.keys(medicalHistory).length > 0 ? medicalHistory : null,
+    chronic_conditions: Object.keys(chronicConditions).length > 0 ? chronicConditions : null
+  };
+
+  try {
+    const result = await apiCall('/patients', 'POST', data);
+    showMessage('Medical history saved successfully!', 'success');
+    closeModal();
+    // Reload medical history after a short delay
+    setTimeout(() => {
+      loadMedicalHistory();
+    }, 500);
+  } catch (error) {
+    console.error('Error updating medical history:', error);
+    showMessage('Error saving medical history: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
+}
+
+// Add Patient Profile Modal
+function showAddPatientProfileModal() {
+  const content = `
+    <form id="add-patient-profile-form">
+      <div class="form-group">
+        <label>Goal Amount *</label>
+        <input type="number" name="goal_amount" step="0.01" min="0" required placeholder="Enter goal amount in USD">
+      </div>
+      <div class="form-group">
+        <label>Story</label>
+        <textarea name="story" rows="6" placeholder="Tell your story..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="active" selected>Active</option>
+          <option value="completed">Completed</option>
+          <option value="paused">Paused</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Profile</button>
+      </div>
+    </form>
+  `;
+  showModal('Create New Patient Profile', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('add-patient-profile-form');
+    if (form) {
+      form.addEventListener('submit', handleAddPatientProfile);
+    }
+  }, 100);
+}
+
+async function handleAddPatientProfile(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const formData = new FormData(e.target);
+  
+  // Validate required fields
+  const goalAmount = formData.get('goal_amount');
+  
+  if (!goalAmount) {
+    showMessage('Please enter a goal amount', 'error');
+    return false;
+  }
+  
+  const data = {
+    goal_amount: parseFloat(goalAmount),
+    story: formData.get('story')?.trim() || null,
+    status: formData.get('status') || 'active'
+  };
+
+  // Validate goal amount
+  if (isNaN(data.goal_amount) || data.goal_amount <= 0) {
+    showMessage('Please enter a valid goal amount greater than 0', 'error');
+    return false;
+  }
+
+  try {
+    const result = await apiCall(`/patients/${currentUser.user_id}/profiles`, 'POST', data);
+    showMessage('Patient profile created successfully!', 'success');
+    closeModal();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadPatientProfiles();
+      loadDashboard();
+    }, 500);
+  } catch (error) {
+    console.error('Error creating patient profile:', error);
+    showMessage('Error creating profile: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
+}
+
+// Make all functions globally available for onclick handlers
+window.closeModal = closeModal;
+window.showEditMedicalHistoryModal = showEditMedicalHistoryModal;
+window.showAddPatientProfileModal = showAddPatientProfileModal;
+window.handleEditMedicalHistory = handleEditMedicalHistory;
+window.handleAddPatientProfile = handleAddPatientProfile;
+window.showAddMedicalCaseModal = showAddMedicalCaseModal;
+window.handleAddMedicalCase = handleAddMedicalCase;
+window.showAddConsultationModal = showAddConsultationModal;
+window.handleAddConsultation = handleAddConsultation;
+window.showAddDonationModal = showAddDonationModal;
+window.showAddMedicationRequestModal = showAddMedicationRequestModal;
+window.handleAddMedicationRequest = handleAddMedicationRequest;
+window.showAddMentalHealthSessionModal = showAddMentalHealthSessionModal;
+window.handleAddMentalHealthSession = handleAddMentalHealthSession;
+window.showAddSupportGroupModal = showAddSupportGroupModal;
+window.handleAddSupportGroup = handleAddSupportGroup;
+window.showAddNGOModal = showAddNGOModal;
+window.showAddInventoryModal = showAddInventoryModal;
+window.viewMedicalCase = viewMedicalCase;
+window.viewConsultation = viewConsultation;
+window.viewDonation = viewDonation;
+window.viewMedicationRequest = viewMedicationRequest;
+window.deleteMedicalCase = deleteMedicalCase;
+window.deleteNGO = deleteNGO;
+window.deleteUser = deleteUser;
+window.deleteInventory = deleteInventory;
+window.editNGO = editNGO;
+window.editInventory = editInventory;
+window.approveMedicationRequest = approveMedicationRequest;
+window.addPermissionToRole = addPermissionToRole;
+window.removePermissionFromRole = removePermissionFromRole;
+window.updateProfile = updateProfile;
+window.handleLogout = handleLogout;
+window.toggleSidebar = toggleSidebar;
+window.navigateToPage = navigateToPage;
 

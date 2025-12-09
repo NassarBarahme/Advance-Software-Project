@@ -49,8 +49,27 @@ async function updateMentalSession(session_id, data) {
   return result;
 }
 
+async function getAllSessions(userId, role) {
+  let query = `SELECT * FROM mental_health_sessions`;
+  let params = [];
+
+  // Patients see their own sessions, admins see all
+  if (role === 'patient') {
+    query += ` WHERE patient_id = ?`;
+    params.push(userId);
+  }
+  // Admins and other roles see all sessions
+  // You can add more role-based filtering here if needed
+
+  query += ` ORDER BY created_at DESC`;
+
+  const [rows] = await pool.query(query, params);
+  return rows;
+}
+
 module.exports = {
   createMentalSession,
   getSessionById,
   updateMentalSession,
+  getAllSessions,
 };

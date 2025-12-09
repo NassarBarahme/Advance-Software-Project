@@ -40,23 +40,31 @@ function setLoading(loading) {
 
 async function handleRegister(e) {
   e.preventDefault();
+  e.stopPropagation();
   hideMessage();
   setLoading(true);
 
-  const form = new FormData(e.target);
-  const formData = Object.fromEntries(form.entries());
+  const form = e.target;
+  const formDataObj = new FormData(form);
+  const formData = Object.fromEntries(formDataObj.entries());
 
   // Validation
+  if (!formData.email || !formData.password || !formData.full_name || !formData.role) {
+    showMessage("Please fill in all required fields", "error");
+    setLoading(false);
+    return false;
+  }
+
   if (formData.password !== formData.confirm_password) {
     showMessage("Passwords do not match", "error");
     setLoading(false);
-    return;
+    return false;
   }
 
   if (formData.password.length < 6) {
     showMessage("Password must be at least 6 characters", "error");
     setLoading(false);
-    return;
+    return false;
   }
 
   // Remove confirm_password from data
@@ -66,18 +74,18 @@ async function handleRegister(e) {
   if (data.role === 'doctor' && !data.specialization) {
     showMessage("Specialization is required for doctors", "error");
     setLoading(false);
-    return;
+    return false;
   }
 
   if (data.role === 'ngo' && !data.organization_name) {
     showMessage("Organization name is required for NGOs", "error");
     setLoading(false);
-    return;
+    return false;
   }
 
   // Clean empty fields
   Object.keys(data).forEach(key => {
-    if (data[key] === '' || data[key] === null) {
+    if (data[key] === '' || data[key] === null || data[key] === undefined) {
       delete data[key];
     }
   });
@@ -91,10 +99,10 @@ async function handleRegister(e) {
 
     const result = await res.json();
 
-    if (res.ok && result.success) {
+    if (res.ok && (result.success || result.accessToken)) {
       // Save tokens and user data
-      localStorage.setItem("accessToken", result.accessToken);
-      localStorage.setItem("user", JSON.stringify(result.user));
+      localStorage.setItem("accessToken", result.accessToken || result.data?.accessToken);
+      localStorage.setItem("user", JSON.stringify(result.user || result.data?.user || result.data));
 
       showMessage("Account created successfully! Redirecting...", "success");
       
@@ -107,13 +115,13 @@ async function handleRegister(e) {
       let errorMsg = result.error || result.message || "Registration failed";
       
       // Translate common errors
-      if (errorMsg.includes("Email already exists") || errorMsg.includes("email")) {
+      if (errorMsg.includes("Email already exists") || errorMsg.includes("email") || errorMsg.includes("already exists")) {
         errorMsg = "Email already exists";
       } else if (errorMsg.includes("Password must be")) {
         errorMsg = "Password must be at least 6 characters";
       } else if (errorMsg.includes("Invalid email")) {
         errorMsg = "Invalid email format";
-      } else if (errorMsg.includes("organization_name")) {
+      } else if (errorMsg.includes("organization_name") || errorMsg.includes("organization")) {
         errorMsg = "Organization name is required for NGOs";
       } else if (errorMsg.includes("specialization")) {
         errorMsg = "Specialization is required for doctors";
@@ -128,36 +136,63 @@ async function handleRegister(e) {
     showMessage("Server connection error. Make sure the server is running on http://localhost:3000", "error");
     setLoading(false);
   }
+  
+  return false;
 }
+
+// Make functions globally available
+window.handleRegister = handleRegister;
+window.togglePassword = togglePassword;
 
 // Handle role selection to show/hide fields
 document.addEventListener("DOMContentLoaded", () => {
+  // Attach form submit handler
+  const registerForm = document.getElementById("registerForm");
+  if (registerForm) {
+    registerForm.addEventListener('submit', handleRegister);
+  }
+
+  // Handle role selection
   const roleSelect = document.getElementById("role-select");
   const specializationGroup = document.getElementById("specialization-group");
   const licenseGroup = document.getElementById("license-number-group");
   const organizationGroup = document.getElementById("organization-group");
 
-  roleSelect.addEventListener("change", () => {
-    const role = roleSelect.value;
+  if (roleSelect) {
+    roleSelect.addEventListener("change", () => {
+      const role = roleSelect.value;
 
-    // Reset all groups
-    specializationGroup.style.display = "none";
-    licenseGroup.style.display = "none";
-    organizationGroup.style.display = "none";
+      // Reset all groups
+      if (specializationGroup) specializationGroup.style.display = "none";
+      if (licenseGroup) licenseGroup.style.display = "none";
+      if (organizationGroup) organizationGroup.style.display = "none";
 
-    // Clear required attributes
-    specializationGroup.querySelector("input").required = false;
-    organizationGroup.querySelector("input").required = false;
+      // Clear required attributes
+      if (specializationGroup) {
+        const specInput = specializationGroup.querySelector("input");
+        if (specInput) specInput.required = false;
+      }
+      if (organizationGroup) {
+        const orgInput = organizationGroup.querySelector("input");
+        if (orgInput) orgInput.required = false;
+      }
 
-    // Show relevant fields based on role
-    if (role === "doctor") {
-      specializationGroup.style.display = "block";
-      licenseGroup.style.display = "block";
-      specializationGroup.querySelector("input").required = true;
-    } else if (role === "ngo") {
-      organizationGroup.style.display = "block";
-      organizationGroup.querySelector("input").required = true;
-    }
-  });
+      // Show relevant fields based on role
+      if (role === "doctor") {
+        if (specializationGroup) {
+          specializationGroup.style.display = "block";
+          const specInput = specializationGroup.querySelector("input");
+          if (specInput) specInput.required = true;
+        }
+        if (licenseGroup) licenseGroup.style.display = "block";
+      } else if (role === "ngo") {
+        if (organizationGroup) {
+          organizationGroup.style.display = "block";
+          const orgInput = organizationGroup.querySelector("input");
+          if (orgInput) orgInput.required = true;
+        }
+      }
+    });
+  }
 });
 

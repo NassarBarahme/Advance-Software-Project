@@ -17,12 +17,12 @@ const requireAnyRole = (...roles) => {
 router.post('/', authenticateToken, requireAnyRole('admin', 'patient'), PatientController.createPatient);
 
 
-router.get('/:patient_id/profiles', PatientController.getPatientProfiles);
+router.get('/:patient_id/profiles', authenticateToken, PatientController.getPatientProfiles);
 
 router.post('/:patient_id/profiles', authenticateToken, requireAnyRole('admin', 'patient'), PatientController.createPatientProfile);
 
 
-router.get('/:patient_id', PatientController.getPatientById);
+router.get('/:patient_id', authenticateToken, PatientController.getPatientById);
 
 
 router.patch('/:patient_id', authenticateToken, requireAnyRole('admin', 'patient'), PatientController.updatePatient);

@@ -63,6 +63,22 @@ async function updateSupportGroup(group_id, data) {
   return result;
 }
 
+async function getAllSupportGroups(userId = null, role = null) {
+  let query = `SELECT * FROM support_groups WHERE is_active = 1`;
+  let params = [];
+
+  // If user is provided, filter by moderator or show all for admin
+  if (userId && role !== 'admin') {
+    query += ` AND (moderator_id = ? OR current_members < max_members)`;
+    params.push(userId);
+  }
+
+  query += ` ORDER BY created_at DESC`;
+
+  const [rows] = await pool.query(query, params);
+  return rows;
+}
+
 async function deleteSupportGroup(group_id) {
   const [result] = await pool.query(
     `DELETE FROM support_groups WHERE group_id = ?`,
@@ -76,4 +92,5 @@ module.exports = {
   getSupportGroupById,
   updateSupportGroup,
   deleteSupportGroup,
+  getAllSupportGroups,
 };

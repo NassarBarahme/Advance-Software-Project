@@ -10,6 +10,6 @@ router.post("/", authenticateToken, createRequest);
 
 router.get("/:request_id", authenticateToken, getRequestById);
 
-router.patch("/:request_id", updateRequest);
+router.patch("/:request_id", authenticateToken, updateRequest);
 
 module.exports = router;

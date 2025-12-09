@@ -34,9 +34,17 @@
         <!-- Patient Menu -->
         <div class="nav-section" id="patient-menu" style="display: none;">
           <h3 class="nav-section-title">Patient</h3>
+          <a href="#" class="nav-item" data-page="medical-history">
+            <span class="nav-icon">📋</span>
+            <span>Medical History</span>
+          </a>
           <a href="#" class="nav-item" data-page="medical-cases">
             <span class="nav-icon">🏥</span>
             <span>Medical Cases</span>
+          </a>
+          <a href="#" class="nav-item" data-page="patient-profiles">
+            <span class="nav-icon">📝</span>
+            <span>My Profiles</span>
           </a>
           <a href="#" class="nav-item" data-page="consultations">
             <span class="nav-icon">💬</span>
@@ -53,6 +61,14 @@
           <a href="#" class="nav-item" data-page="support-groups">
             <span class="nav-icon">👥</span>
             <span>Support Groups</span>
+          </a>
+          <a href="#" class="nav-item" data-page="health-content">
+            <span class="nav-icon">📚</span>
+            <span>Health Content</span>
+          </a>
+          <a href="#" class="nav-item" data-page="health-alerts">
+            <span class="nav-icon">🔔</span>
+            <span>Health Alerts</span>
           </a>
         </div>
 
@@ -348,6 +364,48 @@
                 <!-- Data will be loaded dynamically -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Medical History Page -->
+        <div id="page-medical-history" class="page">
+          <div class="page-header">
+            <h2>Medical History</h2>
+            <button class="btn btn-primary" onclick="showEditMedicalHistoryModal()">Edit Medical History</button>
+          </div>
+          <div class="profile-container" id="medical-history-container">
+            <!-- Medical history will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Patient Profiles Page -->
+        <div id="page-patient-profiles" class="page">
+          <div class="page-header">
+            <h2>My Profiles</h2>
+            <button class="btn btn-primary" onclick="showAddPatientProfileModal()">New Profile</button>
+          </div>
+          <div class="profiles-grid" id="patient-profiles-grid">
+            <!-- Patient profiles will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Health Content Page -->
+        <div id="page-health-content" class="page">
+          <div class="page-header">
+            <h2>Health Content</h2>
+          </div>
+          <div class="content-grid" id="health-content-grid">
+            <!-- Health content will be loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Health Alerts Page -->
+        <div id="page-health-alerts" class="page">
+          <div class="page-header">
+            <h2>Health Alerts</h2>
+          </div>
+          <div class="alerts-list" id="health-alerts-list">
+            <!-- Health alerts will be loaded dynamically -->
           </div>
         </div>
 

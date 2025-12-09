@@ -40,13 +40,22 @@ function setLoading(loading) {
 
 async function handleLogin(e) {
   e.preventDefault();
+  e.stopPropagation();
   hideMessage();
   setLoading(true);
 
+  const form = e.target;
   const data = {
-    email: e.target.email.value,
-    password: e.target.password.value
+    email: form.email.value.trim(),
+    password: form.password.value
   };
+
+  // Validation
+  if (!data.email || !data.password) {
+    showMessage("Please fill in all required fields", "error");
+    setLoading(false);
+    return false;
+  }
 
   try {
     const res = await fetch(`${API_BASE_URL}/login`, {
@@ -57,10 +66,10 @@ async function handleLogin(e) {
 
     const result = await res.json();
 
-    // Backend returns: { success, accessToken, user, message }
-    if (res.ok && result.success) {
-      localStorage.setItem("accessToken", result.accessToken);
-      localStorage.setItem("user", JSON.stringify(result.user));
+    // Backend returns: { success, accessToken, user, message } or { error, message }
+    if (res.ok && (result.success || result.accessToken)) {
+      localStorage.setItem("accessToken", result.accessToken || result.data?.accessToken);
+      localStorage.setItem("user", JSON.stringify(result.user || result.data?.user || result.data));
 
       showMessage("Login successful! Redirecting...", "success");
       
@@ -72,9 +81,9 @@ async function handleLogin(e) {
       let errorMsg = result.error || result.message || "Login failed";
       
       // Translate common errors
-      if (errorMsg.includes("Invalid email or password")) {
+      if (errorMsg.includes("Invalid email or password") || errorMsg.includes("invalid") || errorMsg.includes("credentials")) {
         errorMsg = "Invalid email or password";
-      } else if (errorMsg.includes("Account is inactive")) {
+      } else if (errorMsg.includes("Account is inactive") || errorMsg.includes("inactive")) {
         errorMsg = "Account is inactive. Please contact support";
       }
       
@@ -87,4 +96,18 @@ async function handleLogin(e) {
     showMessage("Server connection error. Make sure the server is running on http://localhost:3000", "error");
     setLoading(false);
   }
+  
+  return false;
 }
+
+// Make function globally available
+window.handleLogin = handleLogin;
+window.togglePassword = togglePassword;
+
+// Attach event listener when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleLogin);
+  }
+});
