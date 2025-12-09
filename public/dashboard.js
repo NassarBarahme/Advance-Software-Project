@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAuth();
   setupNavigation();
   loadDashboard();
+  // Load user permissions on startup
+  loadUserPermissions();
 });
 
 // Check Authentication
@@ -476,6 +478,25 @@ function displayQuickActions(actions, container) {
   `).join('');
 }
 
+// Load User Permissions
+let userPermissions = [];
+async function loadUserPermissions() {
+  try {
+    const result = await apiCall('/roles/permissions/me', 'GET');
+    userPermissions = result?.permissions || [];
+    return userPermissions;
+  } catch (error) {
+    console.error('Error loading user permissions:', error);
+    userPermissions = [];
+    return [];
+  }
+}
+
+// Check if user has permission
+function hasPermission(permissionName) {
+  return userPermissions.some(p => p.name === permissionName);
+}
+
 // Load Profile
 async function loadProfile() {
   const container = document.getElementById('profile-container');
@@ -485,6 +506,10 @@ async function loadProfile() {
     const result = await apiCall('/users/me', 'GET');
     // Extract profile from response (API returns {message, profile})
     const user = result.profile || result;
+    
+    // Load user permissions
+    await loadUserPermissions();
+    
     displayProfile(user, container);
   } catch (error) {
     console.error('Profile loading error:', error);
@@ -559,6 +584,19 @@ function displayProfile(user, container) {
           <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
         </select>
       </div>
+      ${userPermissions.length > 0 ? `
+        <div class="form-group">
+          <label>My Permissions</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+            ${userPermissions.map(p => `
+              <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 16px; font-size: 0.85em;">
+                ${p.name}
+              </span>
+            `).join('')}
+          </div>
+          ${userPermissions.length === 0 ? '<p style="color: #666; font-size: 0.9em;">No permissions assigned</p>' : ''}
+        </div>
+      ` : ''}
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Save Changes</button>
       </div>
@@ -642,6 +680,12 @@ function displayMedicalCases(cases, tbody) {
 }
 
 async function deleteMedicalCase(id) {
+  // Check permission (if permissions are loaded)
+  if (userPermissions.length > 0 && !hasPermission('delete_medical_case') && currentUser?.role !== 'admin') {
+    showMessage('You do not have permission to delete medical cases', 'error');
+    return;
+  }
+
   if (confirm('Are you sure you want to delete this medical case?')) {
     try {
       await apiCall(`/medical-cases/${id}`, 'DELETE');
@@ -1079,16 +1123,151 @@ function displayUsers(users, tbody) {
 }
 
 // Load System Settings
-function loadSystemSettings() {
+async function loadSystemSettings() {
   const container = document.getElementById('system-settings');
   if (!container) return;
 
+  // Only admin can access this page
+  if (currentUser?.role !== 'admin') {
+    container.innerHTML = `
+      <div class="profile-container">
+        <h3>Access Denied</h3>
+        <p>You need admin privileges to access system settings.</p>
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    // Load roles and permissions
+    const [rolesResult, permissionsResult] = await Promise.all([
+      apiCall('/roles', 'GET').catch(() => ({ roles: [] })),
+      apiCall('/roles/permissions/all', 'GET').catch(() => ({ permissions: [] }))
+    ]);
+
+    const roles = rolesResult?.roles || [];
+    const allPermissions = permissionsResult?.permissions || [];
+
+    // Load permissions for each role
+    const rolesWithPermissions = await Promise.all(
+      roles.map(async (role) => {
+        try {
+          const permResult = await apiCall(`/roles/${role.role_id}/permissions`, 'GET');
+          return {
+            ...role,
+            permissions: permResult?.permissions || []
+          };
+        } catch (error) {
+          return {
+            ...role,
+            permissions: []
+          };
+        }
+      })
+    );
+
+    displaySystemSettings(rolesWithPermissions, allPermissions, container);
+  } catch (error) {
+    console.error('Error loading system settings:', error);
+    container.innerHTML = `
+      <div class="profile-container">
+        <h3>Error</h3>
+        <p>Error loading system settings: ${error.message || 'Unknown error'}</p>
+      </div>
+    `;
+  }
+}
+
+// Display System Settings
+function displaySystemSettings(roles, allPermissions, container) {
   container.innerHTML = `
-    <div class="profile-container">
-      <h3>System Settings</h3>
-      <p>Settings page under development</p>
+    <div class="system-settings-container">
+      <div class="settings-section">
+        <h3>Roles & Permissions Management</h3>
+        <p style="color: #666; margin-bottom: 20px;">Manage roles and their assigned permissions</p>
+        
+        <div class="roles-permissions-grid">
+          ${roles.map(role => `
+            <div class="role-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0; color: #2c3e50;">${role.name.charAt(0).toUpperCase() + role.name.slice(1)}</h4>
+                <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 16px; font-size: 0.85em;">
+                  ${role.permissions.length} permission${role.permissions.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div style="margin-bottom: 15px;">
+                <strong>Current Permissions:</strong>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                  ${role.permissions.length > 0 
+                    ? role.permissions.map(p => `
+                        <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 16px; font-size: 0.85em; display: inline-flex; align-items: center; gap: 6px;">
+                          ${p.name}
+                          <button onclick="removePermissionFromRole(${role.role_id}, ${p.permission_id})" 
+                                  style="background: rgba(255,255,255,0.3); border: none; color: white; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; line-height: 1;">×</button>
+                        </span>
+                      `).join('')
+                    : '<span style="color: #999; font-size: 0.9em;">No permissions assigned</span>'
+                  }
+                </div>
+              </div>
+              
+              <div>
+                <strong>Add Permission:</strong>
+                <select id="permission-select-${role.role_id}" style="width: 100%; padding: 8px; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">Select a permission...</option>
+                  ${allPermissions
+                    .filter(p => !role.permissions.some(rp => rp.permission_id === p.permission_id))
+                    .map(p => `<option value="${p.permission_id}">${p.name}${p.description ? ' - ' + p.description : ''}</option>`)
+                    .join('')
+                  }
+                </select>
+                <button onclick="addPermissionToRole(${role.role_id})" 
+                        class="btn btn-primary" 
+                        style="margin-top: 10px; width: 100%;">
+                  Add Permission
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
     </div>
   `;
+}
+
+// Add Permission to Role
+async function addPermissionToRole(roleId) {
+  const select = document.getElementById(`permission-select-${roleId}`);
+  const permissionId = select?.value;
+
+  if (!permissionId) {
+    showMessage('Please select a permission', 'error');
+    return;
+  }
+
+  try {
+    await apiCall(`/roles/${roleId}/permissions`, 'PUT', { permission_id: parseInt(permissionId) });
+    showMessage('Permission added successfully', 'success');
+    loadSystemSettings();
+  } catch (error) {
+    showMessage('Error adding permission: ' + (error.message || 'Unknown error'), 'error');
+  }
+}
+
+// Remove Permission from Role
+async function removePermissionFromRole(roleId, permissionId) {
+  if (!confirm('Are you sure you want to remove this permission from the role?')) {
+    return;
+  }
+
+  try {
+    await apiCall(`/roles/${roleId}/permissions/${permissionId}`, 'DELETE');
+    showMessage('Permission removed successfully', 'success');
+    loadSystemSettings();
+  } catch (error) {
+    showMessage('Error removing permission: ' + (error.message || 'Unknown error'), 'error');
+  }
 }
 
 // API Call Helper
@@ -1260,6 +1439,22 @@ function showModal(title, content) {
     </div>
   `;
   overlay.classList.add('active');
+  
+  // Close modal when clicking on overlay (but not on modal content)
+  overlay.onclick = (e) => {
+    // Only close if clicking directly on the overlay, not on modal content
+    if (e.target === overlay) {
+      closeModal();
+    }
+  };
+  
+  // Prevent modal from closing when clicking inside modal
+  const modal = overlay.querySelector('.modal');
+  if (modal) {
+    modal.onclick = (e) => {
+      e.stopPropagation();
+    };
+  }
 }
 
 function closeModal() {
@@ -1300,6 +1495,13 @@ function showAddMedicalCaseModal() {
 
 async function handleAddMedicalCase(e) {
   e.preventDefault();
+  
+  // Check permission (if permissions are loaded)
+  if (userPermissions.length > 0 && !hasPermission('create_medical_case') && currentUser?.role !== 'patient') {
+    showMessage('You do not have permission to create medical cases', 'error');
+    return;
+  }
+
   const formData = new FormData(e.target);
   const data = {
     patient_id: currentUser.user_id,
@@ -1664,6 +1866,12 @@ async function handleAddSupportGroup(e) {
 
 // Add NGO Modal
 function showAddNGOModal() {
+  // Check permission (if permissions are loaded)
+  if (userPermissions.length > 0 && !hasPermission('create_ngo') && currentUser?.role !== 'admin') {
+    showMessage('You do not have permission to add NGOs', 'error');
+    return;
+  }
+
   const content = `
     <form id="add-ngo-form" onsubmit="handleAddNGO(event)">
       <div class="form-group">
@@ -2068,6 +2276,12 @@ async function handleEditNGO(e, id) {
 }
 
 async function deleteNGO(id) {
+  // Check permission (if permissions are loaded)
+  if (userPermissions.length > 0 && !hasPermission('delete_ngo') && currentUser?.role !== 'admin') {
+    showMessage('You do not have permission to delete NGOs', 'error');
+    return;
+  }
+
   if (confirm('Are you sure you want to delete this NGO?')) {
     try {
       await apiCall(`/ngos/${id}`, 'DELETE');
@@ -2081,6 +2295,12 @@ async function deleteNGO(id) {
 }
 
 async function deleteUser(id) {
+  // Check permission (if permissions are loaded)
+  if (userPermissions.length > 0 && !hasPermission('delete_user') && currentUser?.role !== 'admin') {
+    showMessage('You do not have permission to delete users', 'error');
+    return;
+  }
+
   if (confirm('Are you sure you want to delete this user?')) {
     try {
       await apiCall(`/users/${id}`, 'DELETE');
@@ -2162,10 +2382,10 @@ async function handleEditInventory(e, id) {
 async function deleteInventory(id) {
   if (confirm('Are you sure you want to delete this inventory item?')) {
     try {
-      // Note: Backend might not have DELETE endpoint, using PATCH to mark as deleted
-      await apiCall(`/medical_inventory/${id}`, 'PATCH', { availability_status: 'distributed' });
+      await apiCall(`/medical_inventory/${id}`, 'DELETE');
       showMessage('Inventory item deleted successfully', 'success');
       loadMedicalInventory();
+      loadDashboard();
     } catch (error) {
       showMessage('Error deleting inventory: ' + (error.message || 'Unknown error'), 'error');
     }

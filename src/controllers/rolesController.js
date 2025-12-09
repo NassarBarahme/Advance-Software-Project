@@ -2,7 +2,9 @@ const {
   getRoles,
   getPermissionsByRole,
   assignPermission,
-  deletePermissionAssignment
+  deletePermissionAssignment,
+  getAllPermissions,
+  getUserPermissions
 } = require("../models/roles_DB");
 
 async function getAllRoles(req, res) {
@@ -88,9 +90,40 @@ async function removePermissionFromRole(req, res) {
   }
 }
 
+async function getAllPermissionsController(req, res) {
+  try {
+    const permissions = await getAllPermissions();
+    res.json({
+      message: "Permissions retrieved successfully",
+      count: permissions.length,
+      permissions,
+    });
+  } catch (error) {
+    console.error("Error getting permissions:", error);
+    res.status(500).json({ error: "Failed to retrieve permissions" });
+  }
+}
+
+async function getMyPermissionsController(req, res) {
+  try {
+    const user_id = req.user.user_id;
+    const permissions = await getUserPermissions(user_id);
+    res.json({
+      message: "User permissions retrieved successfully",
+      count: permissions.length,
+      permissions,
+    });
+  } catch (error) {
+    console.error("Error getting user permissions:", error);
+    res.status(500).json({ error: "Failed to retrieve user permissions" });
+  }
+}
+
 module.exports = {
   getAllRoles,
   getRolePermissions,
   addPermissionToRole,
   removePermissionFromRole,
+  getAllPermissionsController,
+  getMyPermissionsController,
 };

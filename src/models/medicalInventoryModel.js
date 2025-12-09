@@ -54,4 +54,12 @@ async function updateInventory(inventory_id, data) {
   return result;
 }
 
-module.exports = { addInventory, getInventoryById, updateInventory };
+async function deleteInventory(inventory_id) {
+  const [result] = await pool.query(
+    `DELETE FROM medical_inventory WHERE inventory_id = ?`,
+    [inventory_id]
+  );
+  return result.affectedRows > 0;
+}
+
+module.exports = { addInventory, getInventoryById, updateInventory, deleteInventory };

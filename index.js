@@ -22,6 +22,7 @@ const ngoRoutes = require('./src/routes/ngoRoutes');
 const staffRoutes = require('./src/routes/staffRoutes');
 const consultationsRoutes = require('./src/routes/consultationsRoutes');
 const systemRoutes = require('./src/routes/systemRoutes');
+const rolesRoutes = require('./src/routes/rolesRoutes');
 
 
 
@@ -47,6 +48,7 @@ app.use('/api/ngos', ngoRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/consultations',consultationsRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/roles', rolesRoutes);
 
 
 

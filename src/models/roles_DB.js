@@ -52,9 +52,38 @@ async function deletePermissionAssignment(role_id, permission_id) {
   }
 }
 
+// Get all permissions
+async function getAllPermissions() {
+  try {
+    const [rows] = await pool.query("SELECT * FROM permissions ORDER BY permission_id ASC");
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Get user permissions based on their role
+async function getUserPermissions(user_id) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.permission_id, p.name, p.description
+       FROM users u
+       JOIN role_permissions rp ON u.role_id = rp.role_id
+       JOIN permissions p ON rp.permission_id = p.permission_id
+       WHERE u.user_id = ?`,
+      [user_id]
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+}
+
 module.exports = {
   getRoles,
   getPermissionsByRole,
   assignPermission,
-  deletePermissionAssignment
+  deletePermissionAssignment,
+  getAllPermissions,
+  getUserPermissions
 };

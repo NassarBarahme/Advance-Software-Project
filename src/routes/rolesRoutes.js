@@ -5,8 +5,9 @@ const {
   getAllRoles,
   getRolePermissions,
   addPermissionToRole,
- 
-  removePermissionFromRole
+  removePermissionFromRole,
+  getAllPermissionsController,
+  getMyPermissionsController
 } = require("../controllers/rolesController");
 
 const { authenticateToken, requireRole } = require("../middleware/authenticateToken");
@@ -18,6 +19,12 @@ router.get("/test", (req, res) => {
 
 
 router.get("/", authenticateToken, requireRole("admin"), getAllRoles);
+
+// Get all available permissions (admin only)
+router.get("/permissions/all", authenticateToken, requireRole("admin"), getAllPermissionsController);
+
+// Get current user's permissions
+router.get("/permissions/me", authenticateToken, getMyPermissionsController);
 
 router.get("/:role_id/permissions", authenticateToken, requireRole("admin"), getRolePermissions);
 
