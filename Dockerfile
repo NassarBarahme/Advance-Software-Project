@@ -16,6 +16,9 @@ RUN npm ci --only=production
 COPY . .
 
 
+COPY public ./public
+
+
 RUN mkdir -p uploads
 
 

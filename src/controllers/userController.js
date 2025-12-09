@@ -278,16 +278,16 @@ async function verifyUserController(req, res) {
 
     // ✅ التحقق من صحة الـ ID
     if (isNaN(userId) || userId <= 0) {
-      return res.status(400).json({ 
-        error: "Invalid user ID" 
+      return res.status(400).json({
+        error: "Invalid user ID"
       });
     }
 
     const verified = await verifyUser(userId);
 
     if (!verified) {
-      return res.status(404).json({ 
-        error: "User not found" 
+      return res.status(404).json({
+        error: "User not found"
       });
     }
 
