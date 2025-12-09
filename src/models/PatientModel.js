@@ -1,9 +1,6 @@
 const pool = require('../config/database');
 
 class PatientModel {
-  /**
-   * Create new patient
-   */
   static async create(data) {
     const {
       patient_id,
@@ -31,9 +28,6 @@ class PatientModel {
     return patient_id;
   }
 
-  /**
-   * Get patient by ID
-   */
   static async getById(patientId) {
     try {
       const [rows] = await pool.query(
@@ -47,12 +41,11 @@ class PatientModel {
 
       if (!rows[0]) return null;
 
-      // Helper function to safely parse JSON
       const safeParseJSON = (value) => {
         try {
           if (!value || value === null || value === '') return null;
           if (typeof value === 'object' && !Array.isArray(value) && value.constructor === Object) {
-            return value; // Already an object
+            return value; 
           }
           if (typeof value === 'string') {
             return JSON.parse(value);
@@ -63,7 +56,6 @@ class PatientModel {
         }
       };
 
-      // Parse JSON fields
       rows[0].medical_history = safeParseJSON(rows[0].medical_history);
       rows[0].chronic_conditions = safeParseJSON(rows[0].chronic_conditions);
       rows[0].consent_data = safeParseJSON(rows[0].consent_data);
@@ -71,14 +63,12 @@ class PatientModel {
       return rows[0];
 
     } catch (error) {
-      console.error('❌ Error in getById:', error);
+      console.error(' Error in getById:', error);
       throw error;
     }
   }
 
-  /**
-   * Update patient info
-   */
+ 
   static async update(patientId, data) {
     const allowedFields = [
       'medical_history', 'blood_type', 'chronic_conditions', 'consent_data'
@@ -99,7 +89,6 @@ class PatientModel {
             values.push(data[key]);
           }
         } else {
-          // blood_type
           updates.push(`${key} = ?`);
           values.push(data[key] === '' ? null : data[key]);
         }
@@ -120,9 +109,7 @@ class PatientModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Delete patient
-   */
+
   static async delete(patientId) {
     const [result] = await pool.query(
       'DELETE FROM patients WHERE patient_id = ?',
@@ -132,9 +119,6 @@ class PatientModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Get patient fundraising profiles
-   */
   static async getProfiles(patientId) {
     const [rows] = await pool.query(
       `SELECT pp.*, p.patient_id, u.full_name as patient_name
@@ -149,9 +133,7 @@ class PatientModel {
     return rows;
   }
 
-  /**
-   * Create patient fundraising profile
-   */
+
   static async createProfile(patientId, data) {
     const {
       goal_amount,

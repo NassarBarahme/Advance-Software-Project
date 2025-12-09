@@ -2,9 +2,7 @@ const HealthAlertModel = require('../models/HealthAlertModel');
 const ResponseHelper = require('../utils/responseHelper');
 
 class HealthAlertController {
-  /**
-   * POST /health_alerts - Create health alert
-   */
+
   static async createAlert(req, res) {
     try {
       const {
@@ -17,7 +15,7 @@ class HealthAlertController {
         expires_at
       } = req.body;
 
-      // Validation
+      
       if (!alert_title || !alert_content || !alert_type) {
         return ResponseHelper.error(res, 'Alert title, content, and type are required', 400);
       }
@@ -52,9 +50,7 @@ class HealthAlertController {
     }
   }
 
-  /**
-   * GET /health_alerts/:alert_id - Get health alert by ID
-   */
+
   static async getAlertById(req, res) {
     try {
       const { alert_id } = req.params;
@@ -70,9 +66,7 @@ class HealthAlertController {
     }
   }
 
-  /**
-   * GET /health_alerts - Get all health alerts with filters
-   */
+
   static async getAllAlerts(req, res) {
     try {
       const filters = {
@@ -91,9 +85,7 @@ class HealthAlertController {
     }
   }
 
-  /**
-   * PATCH /health_alerts/:alert_id - Update health alert
-   */
+
   static async updateAlert(req, res) {
     try {
       const { alert_id } = req.params;
@@ -115,9 +107,7 @@ class HealthAlertController {
     }
   }
 
-  /**
-   * DELETE /health_alerts/:alert_id - Delete health alert
-   */
+ 
   static async deleteAlert(req, res) {
     try {
       const { alert_id } = req.params;

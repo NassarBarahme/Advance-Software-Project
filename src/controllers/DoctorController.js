@@ -3,9 +3,8 @@ const ResponseHelper = require('../utils/responseHelper');
 const pool = require('../config/database');
 
 class DoctorController {
-  /**
-   * POST /doctors - Add doctor
-   */
+ 
+
   static async createDoctor(req, res) {
     try {
       const {
@@ -17,12 +16,12 @@ class DoctorController {
         availability_schedule
       } = req.body;
 
-      // Validation
+      
       if (!doctor_id || !specialization) {
         return ResponseHelper.error(res, 'Doctor ID and specialization are required', 400);
       }
 
-      // Verify that user exists and has doctor role
+      
       const [users] = await pool.query(
         `SELECT u.*, r.name as role_name 
          FROM users u 
@@ -40,7 +39,6 @@ class DoctorController {
         return ResponseHelper.error(res, `User with ID ${doctor_id} is not a doctor. User role: ${user.role_name}`, 400);
       }
 
-      // Check if doctor already exists
       const existingDoctor = await DoctorModel.getById(doctor_id);
       if (existingDoctor) {
         return ResponseHelper.error(res, 'Doctor already exists', 409);
@@ -65,9 +63,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * GET /doctors/:doctor_id - Get doctor profile
-   */
+  
   static async getDoctorById(req, res) {
     try {
       const { doctor_id } = req.params;
@@ -83,9 +79,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * GET /doctors - Get all doctors with filters
-   */
+  
   static async getAllDoctors(req, res) {
     try {
       const filters = {
@@ -102,9 +96,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * PATCH /doctors/:doctor_id - Update doctor info
-   */
+
   static async updateDoctor(req, res) {
     try {
       const { doctor_id } = req.params;
@@ -126,9 +118,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * DELETE /doctors/:doctor_id - Delete doctor
-   */
+  
   static async deleteDoctor(req, res) {
     try {
       const { doctor_id } = req.params;
@@ -149,9 +139,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * GET /doctors/:doctor_id/certifications - List certifications
-   */
+
   static async getCertifications(req, res) {
     try {
       const { doctor_id } = req.params;
@@ -168,9 +156,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * POST /doctors/:doctor_id/certifications - Add certification
-   */
+  
   static async addCertification(req, res) {
     try {
       const { doctor_id } = req.params;
@@ -210,9 +196,7 @@ class DoctorController {
     }
   }
 
-  /**
-   * DELETE /doctors/:doctor_id/certifications/:cert_id - Remove certification
-   */
+  
   static async removeCertification(req, res) {
     try {
       const { doctor_id, cert_id } = req.params;

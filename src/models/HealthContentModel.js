@@ -1,9 +1,7 @@
 const pool = require('../config/database');
 
 class HealthContentModel {
-  /**
-   * Create new health content
-   */
+
   static async create(data) {
     const {
       title,
@@ -26,9 +24,7 @@ class HealthContentModel {
     return result.insertId;
   }
 
-  /**
-   * Get health content by ID
-   */
+
   static async getById(contentId) {
     const [rows] = await pool.query(
       `SELECT hc.*, u.full_name as creator_name 
@@ -40,9 +36,7 @@ class HealthContentModel {
     return rows[0];
   }
 
-  /**
-   * Get all health content with filters
-   */
+
   static async getAll(filters = {}) {
     let query = `SELECT hc.*, u.full_name as creator_name 
                  FROM health_content hc
@@ -86,9 +80,6 @@ class HealthContentModel {
     return rows;
   }
 
-  /**
-   * Update health content
-   */
   static async update(contentId, data) {
     const allowedFields = [
       'title', 'content_type', 'category', 'content_text', 
@@ -117,17 +108,13 @@ class HealthContentModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Delete health content
-   */
+
   static async delete(contentId) {
     const [result] = await pool.query('DELETE FROM health_content WHERE content_id = ?', [contentId]);
     return result.affectedRows > 0;
   }
 
-  /**
-   * Increment view count
-   */
+
   static async incrementViews(contentId) {
     await pool.query('UPDATE health_content SET view_count = view_count + 1 WHERE content_id = ?', [contentId]);
   }

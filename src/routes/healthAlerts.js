@@ -3,7 +3,6 @@ const router = express.Router();
 const HealthAlertController = require('../controllers/HealthAlertController');
 const { authenticateToken, requireRole } = require('../middleware/authenticateToken');
 
-// Helper middleware for multiple roles
 const requireAnyRole = (...roles) => {
   return (req, res, next) => {
     if (req.user && roles.includes(req.user.role)) {

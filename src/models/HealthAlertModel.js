@@ -1,9 +1,6 @@
 const pool = require('../config/database');
 
 class HealthAlertModel {
-  /**
-   * Create new health alert
-   */
   static async create(data) {
     const {
       alert_title,
@@ -34,9 +31,7 @@ class HealthAlertModel {
     return result.insertId;
   }
 
-  /**
-   * Get health alert by ID
-   */
+
   static async getById(alertId) {
     const [rows] = await pool.query(
       `SELECT ha.*, u.full_name as creator_name 
@@ -48,17 +43,13 @@ class HealthAlertModel {
     
     if (rows[0] && rows[0].affected_areas !== null && rows[0].affected_areas !== undefined) {
       try {
-        // MySQL JSON column may return as object/array directly, or as string
         if (typeof rows[0].affected_areas === 'string') {
-          // Only parse if it's a valid JSON string
           const trimmed = rows[0].affected_areas.trim();
           if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
             rows[0].affected_areas = JSON.parse(rows[0].affected_areas);
           }
         }
-        // If it's already an object/array, leave it as is
       } catch (error) {
-        // If parsing fails, set to null
         console.error('Error parsing affected_areas:', error);
         rows[0].affected_areas = null;
       }
@@ -67,9 +58,7 @@ class HealthAlertModel {
     return rows[0];
   }
 
-  /**
-   * Get all health alerts with filters
-   */
+
   static async getAll(filters = {}) {
     let query = `SELECT ha.*, u.full_name as creator_name 
                  FROM health_alerts ha
@@ -92,7 +81,6 @@ class HealthAlertModel {
       params.push(filters.is_active);
     }
 
-    // Only show non-expired alerts by default
     if (filters.include_expired !== true) {
       query += ' AND (ha.expires_at IS NULL OR ha.expires_at > NOW())';
     }
@@ -111,21 +99,16 @@ class HealthAlertModel {
 
     const [rows] = await pool.query(query, params);
     
-    // Parse JSON fields
     rows.forEach(row => {
       if (row.affected_areas !== null && row.affected_areas !== undefined) {
         try {
-          // MySQL JSON column may return as object/array directly, or as string
           if (typeof row.affected_areas === 'string') {
-            // Only parse if it's a valid JSON string
             const trimmed = row.affected_areas.trim();
             if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
               row.affected_areas = JSON.parse(row.affected_areas);
             }
           }
-          // If it's already an object/array, leave it as is
         } catch (error) {
-          // If parsing fails, set to null
           console.error('Error parsing affected_areas:', error);
           row.affected_areas = null;
         }
@@ -135,9 +118,7 @@ class HealthAlertModel {
     return rows;
   }
 
-  /**
-   * Update health alert
-   */
+
   static async update(alertId, data) {
     const allowedFields = [
       'alert_title', 'alert_content', 'alert_type', 
@@ -171,9 +152,7 @@ class HealthAlertModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Delete health alert
-   */
+
   static async delete(alertId) {
     const [result] = await pool.query('DELETE FROM health_alerts WHERE alert_id = ?', [alertId]);
     return result.affectedRows > 0;

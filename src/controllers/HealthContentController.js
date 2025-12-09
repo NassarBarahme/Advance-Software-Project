@@ -2,9 +2,7 @@ const HealthContentModel = require('../models/HealthContentModel');
 const ResponseHelper = require('../utils/responseHelper');
 
 class HealthContentController {
-  /**
-   * POST /health_content - Create health content
-   */
+  
   static async createContent(req, res) {
     try {
       const {
@@ -18,7 +16,7 @@ class HealthContentController {
         is_published
       } = req.body;
 
-      // Validation
+   
       if (!title || !content_type || !category) {
         return ResponseHelper.error(res, 'Title, content_type, and category are required', 400);
       }
@@ -49,9 +47,7 @@ class HealthContentController {
     }
   }
 
-  /**
-   * GET /health_content/:content_id - Get health content by ID
-   */
+ 
   static async getContentById(req, res) {
     try {
       const { content_id } = req.params;
@@ -61,7 +57,7 @@ class HealthContentController {
         return ResponseHelper.notFound(res, 'Health content not found');
       }
 
-      // Increment view count if published
+   
       if (content.is_published) {
         await HealthContentModel.incrementViews(content_id);
       }
@@ -72,9 +68,7 @@ class HealthContentController {
     }
   }
 
-  /**
-   * GET /health_content - Get all health content with filters
-   */
+  
   static async getAllContent(req, res) {
     try {
       const filters = {
@@ -93,9 +87,7 @@ class HealthContentController {
     }
   }
 
-  /**
-   * PATCH /health_content/:content_id - Update health content
-   */
+
   static async updateContent(req, res) {
     try {
       const { content_id } = req.params;
@@ -117,9 +109,7 @@ class HealthContentController {
     }
   }
 
-  /**
-   * DELETE /health_content/:content_id - Delete health content
-   */
+ 
   static async deleteContent(req, res) {
     try {
       const { content_id } = req.params;

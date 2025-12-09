@@ -1,9 +1,7 @@
 const pool = require('../config/database');
 
 class DoctorModel {
-  /**
-   * Create new doctor
-   */
+
   static async create(data) {
     const {
       doctor_id,
@@ -25,7 +23,6 @@ class DoctorModel {
         license_number,
         experience_years || 0,
         profile_bio,
-        // نخزنها كنص JSON في الداتا بيس
         availability_schedule ? JSON.stringify(availability_schedule) : null,
         created_by
       ]
@@ -33,9 +30,7 @@ class DoctorModel {
     return doctor_id;
   }
 
-  /**
-   * Get doctor by ID
-   */
+
   static async getById(doctorId) {
     const [rows] = await pool.query(
       `SELECT d.*, 
@@ -54,7 +49,6 @@ class DoctorModel {
 
     const doctor = rows[0];
 
-    // availability_schedule راجعة أحيانًا object وأحيانًا string
     if (
       doctor &&
       doctor.availability_schedule &&
@@ -63,7 +57,6 @@ class DoctorModel {
       try {
         doctor.availability_schedule = JSON.parse(doctor.availability_schedule);
       } catch (e) {
-        // لو صار خطأ بالـ JSON نخليها زي ما هي عشان ما نكسر الريسبونس
         console.error('Error parsing availability_schedule for doctor:', doctorId, e);
       }
     }
@@ -71,9 +64,7 @@ class DoctorModel {
     return doctor;
   }
 
-  /**
-   * Get all doctors with filters
-   */
+
   static async getAll(filters = {}) {
     let query = `SELECT d.*, 
                         u.full_name, 
@@ -109,7 +100,7 @@ class DoctorModel {
 
     const [rows] = await pool.query(query, params);
 
-    // Parse JSON field safely
+    
     rows.forEach(row => {
       if (row.availability_schedule && typeof row.availability_schedule === 'string') {
         try {
@@ -127,9 +118,7 @@ class DoctorModel {
     return rows;
   }
 
-  /**
-   * Update doctor
-   */
+
   static async update(doctorId, data) {
     const allowedFields = [
       'specialization',
@@ -145,10 +134,8 @@ class DoctorModel {
     Object.keys(data).forEach(key => {
       if (allowedFields.includes(key) && data[key] !== undefined) {
         if (key === 'availability_schedule') {
-          // نتأكد إنها تنخزن كنص JSON
           updates.push(`${key} = ?`);
           if (typeof data[key] === 'string') {
-            // لو جتنا أصلاً string نخليها زي ما هي
             values.push(data[key]);
           } else {
             values.push(JSON.stringify(data[key]));
@@ -172,9 +159,6 @@ class DoctorModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Delete doctor
-   */
   static async delete(doctorId) {
     const [result] = await pool.query(
       'DELETE FROM doctors WHERE doctor_id = ?',
@@ -183,9 +167,7 @@ class DoctorModel {
     return result.affectedRows > 0;
   }
 
-  /**
-   * Get doctor certifications
-   */
+
   static async getCertifications(doctorId) {
     const [rows] = await pool.query(
       'SELECT * FROM doctor_certifications WHERE doctor_id = ? ORDER BY issue_date DESC',
@@ -194,9 +176,7 @@ class DoctorModel {
     return rows;
   }
 
-  /**
-   * Add certification
-   */
+
   static async addCertification(doctorId, certData) {
     const {
       cert_name,
@@ -216,9 +196,7 @@ class DoctorModel {
     return result.insertId;
   }
 
-  /**
-   * Remove certification
-   */
+
   static async removeCertification(doctorId, certId) {
     const [result] = await pool.query(
       'DELETE FROM doctor_certifications WHERE doctor_id = ? AND cert_id = ?',
