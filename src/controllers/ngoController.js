@@ -51,7 +51,7 @@ async function getNGOByIdController(req, res) {
     const { id } = req.params;
     if (!id) return ResponseHelper.validationError(res, [{ field: 'id', message: 'NGO ID is required' }]);
 
-    const ngo = await getNGOById(id); // ← هنا فقط id بدون أي pool
+    const ngo = await getNGOById(id); 
     if (!ngo) return ResponseHelper.notFound(res, 'NGO not found');
 
     return ResponseHelper.success(res, ngo, 'NGO retrieved successfully');

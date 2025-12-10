@@ -13,6 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Setup button event listeners for buttons in HTML
   setupButtonListeners();
+  
+  // Setup logout button
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof handleLogout === 'function') {
+        handleLogout();
+      } else if (typeof window.handleLogout === 'function') {
+        window.handleLogout();
+      }
+    });
+  }
 });
 
 // Setup button event listeners for buttons defined in HTML
@@ -565,15 +579,37 @@ function getQuickActions() {
   } else if (role === 'doctor') {
     actions.push({
       icon: '💬',
-      title: 'Consultations',
-      description: 'View consultations',
+      title: 'New Consultation',
+      description: 'Create a new consultation',
+      action: () => {
+        if (typeof showAddConsultationModal === 'function') {
+          showAddConsultationModal();
+        }
+      }
+    });
+    actions.push({
+      icon: '💬',
+      title: 'My Consultations',
+      description: 'View all consultations',
       action: () => navigateToPage('consultations')
     });
     actions.push({
       icon: '🏥',
       title: 'Medical Cases',
-      description: 'View medical cases',
+      description: 'View and manage medical cases',
       action: () => navigateToPage('medical-cases')
+    });
+    actions.push({
+      icon: '🏥',
+      title: 'Add Medical Case',
+      description: 'Create a new medical case',
+      action: () => {
+        if (typeof showAddMedicalCaseModal === 'function') {
+          showAddMedicalCaseModal();
+        } else if (typeof window.showAddMedicalCaseModal === 'function') {
+          window.showAddMedicalCaseModal();
+        }
+      }
     });
   } else if (role === 'donor') {
     actions.push({
@@ -695,6 +731,25 @@ async function loadProfile() {
     await loadUserPermissions();
     
     displayProfile(user, container);
+    
+    // Attach event listener to profile form
+    setTimeout(() => {
+      const form = document.getElementById('profile-update-form');
+      if (form) {
+        // Remove any existing listeners by cloning
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        // Add new listener
+        const updatedForm = document.getElementById('profile-update-form');
+        if (updatedForm) {
+          updatedForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await updateProfile(e);
+          });
+        }
+      }
+    }, 200);
   } catch (error) {
     console.error('Profile loading error:', error);
     showMessage('Error loading profile: ' + (error.message || 'Unknown error'), 'error');
@@ -715,8 +770,14 @@ function displayProfile(user, container) {
   // Get role from user (could be role, role_name, or role_id)
   const userRole = user.role || user.role_name || '';
   
-  // Get specialization from doctor_data if available
-  const specialization = user.doctor_data?.specialization || user.specialization || '';
+  // Get doctor-specific data
+  const doctorData = user.doctor_data || {};
+  const specialization = doctorData.specialization || user.specialization || '';
+  const licenseNumber = doctorData.license_number || '';
+  const experienceYears = doctorData.experience_years || 0;
+  const profileBio = doctorData.profile_bio || '';
+  const availabilitySchedule = doctorData.availability_schedule || null;
+  const certifications = doctorData.certifications || [];
   
   // Format date_of_birth for input field (YYYY-MM-DD)
   let dateOfBirth = '';
@@ -724,6 +785,17 @@ function displayProfile(user, container) {
     const date = new Date(user.date_of_birth);
     if (!isNaN(date.getTime())) {
       dateOfBirth = date.toISOString().split('T')[0];
+    }
+  }
+  
+  // Format availability schedule for display
+  let availabilityScheduleText = '';
+  if (availabilitySchedule) {
+    try {
+      const schedule = typeof availabilitySchedule === 'string' ? JSON.parse(availabilitySchedule) : availabilitySchedule;
+      availabilityScheduleText = JSON.stringify(schedule, null, 2);
+    } catch (e) {
+      availabilityScheduleText = '';
     }
   }
 
@@ -735,7 +807,7 @@ function displayProfile(user, container) {
         <p>${roleNames[userRole] || userRole || 'User'}</p>
       </div>
     </div>
-    <form class="profile-form" onsubmit="updateProfile(event)">
+    <form class="profile-form" id="profile-update-form">
       <div class="form-group">
         <label>Full Name *</label>
         <input type="text" name="full_name" value="${user.full_name || ''}" required>
@@ -751,8 +823,25 @@ function displayProfile(user, container) {
       </div>
       ${userRole === 'doctor' ? `
         <div class="form-group">
-          <label>Specialization</label>
-          <input type="text" name="specialization" value="${specialization}">
+          <label>Specialization *</label>
+          <input type="text" name="specialization" value="${specialization}" required>
+        </div>
+        <div class="form-group">
+          <label>License Number</label>
+          <input type="text" name="license_number" value="${licenseNumber}" placeholder="Enter your medical license number">
+        </div>
+        <div class="form-group">
+          <label>Experience (Years)</label>
+          <input type="number" name="experience_years" value="${experienceYears}" min="0" max="100" placeholder="Years of experience">
+        </div>
+        <div class="form-group">
+          <label>Profile Bio</label>
+          <textarea name="profile_bio" rows="4" placeholder="Tell us about your medical background and expertise...">${profileBio}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Availability Schedule (JSON)</label>
+          <textarea name="availability_schedule" rows="6" placeholder='{"monday": {"start": "09:00", "end": "17:00"}, "tuesday": {"start": "09:00", "end": "17:00"}}'>${availabilityScheduleText}</textarea>
+          <small style="color: #666; font-size: 0.85em;">Enter your weekly availability schedule in JSON format</small>
         </div>
       ` : ''}
       <div class="form-group">
@@ -790,21 +879,104 @@ function displayProfile(user, container) {
 
 // Update Profile
 async function updateProfile(e) {
-  e.preventDefault();
-  e.stopPropagation();
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   
-  const formData = new FormData(e.target);
-  const data = Object.fromEntries(formData.entries());
+  const form = document.getElementById('profile-update-form');
+  if (!form) {
+    showMessage('Form not found', 'error');
+    return false;
+  }
+  
+  const formData = new FormData(form);
+  const allData = Object.fromEntries(formData.entries());
+  
+  console.log('Updating profile with data:', allData);
+  
+  // Separate user data from doctor-specific data
+  const userData = {};
+  const doctorData = {};
+  
+  // User fields - always include full_name if it exists
+  const userFields = ['full_name', 'phone_number', 'date_of_birth', 'gender', 'preferred_language'];
+  userFields.forEach(field => {
+    if (allData[field] !== undefined) {
+      // Allow empty strings for optional fields, but not for required ones
+      if (field === 'full_name' && !allData[field]) {
+        showMessage('Full name is required', 'error');
+        return false;
+      }
+      userData[field] = allData[field] || null;
+    }
+  });
+  
+  // Doctor-specific fields
+  if (currentUser?.role === 'doctor') {
+    const doctorFields = ['specialization', 'license_number', 'experience_years', 'profile_bio', 'availability_schedule'];
+    doctorFields.forEach(field => {
+      if (allData[field] !== undefined) {
+        if (field === 'availability_schedule') {
+          if (allData[field] && allData[field].trim()) {
+            try {
+              doctorData[field] = JSON.parse(allData[field]);
+            } catch (e) {
+              showMessage('Invalid JSON format for availability schedule', 'error');
+              return false;
+            }
+          } else {
+            doctorData[field] = null;
+          }
+        } else if (field === 'experience_years') {
+          doctorData[field] = allData[field] ? parseInt(allData[field]) || 0 : 0;
+        } else if (field === 'specialization') {
+          // Specialization is required for doctors
+          if (!allData[field] || !allData[field].trim()) {
+            showMessage('Specialization is required', 'error');
+            return false;
+          }
+          doctorData[field] = allData[field];
+        } else {
+          // For other fields, allow empty strings (will be converted to null by backend)
+          doctorData[field] = allData[field] || null;
+        }
+      }
+    });
+  }
 
+  console.log('User data to update:', userData);
+  console.log('Doctor data to update:', doctorData);
+  
   try {
-    await apiCall(`/users/${currentUser.user_id}`, 'PUT', data);
+    // Update user data first (always send if there's at least full_name)
+    if (Object.keys(userData).length > 0) {
+      console.log('Updating user data...');
+      const userResult = await apiCall(`/users/${currentUser.user_id}`, 'PUT', userData);
+      console.log('User update result:', userResult);
+    } else {
+      console.log('No user data to update');
+    }
+    
+    // Update doctor-specific data if any
+    if (currentUser?.role === 'doctor' && Object.keys(doctorData).length > 0) {
+      console.log('Updating doctor data...');
+      const doctorResult = await apiCall(`/doctors/${currentUser.user_id}`, 'PATCH', doctorData);
+      console.log('Doctor update result:', doctorResult);
+    } else if (currentUser?.role === 'doctor') {
+      console.log('No doctor data to update');
+    }
+    
     showMessage('Profile updated successfully!', 'success');
     // Reload profile after a short delay to show message first
     setTimeout(() => {
-    loadProfile();
+      loadProfile();
     }, 500);
   } catch (error) {
-    showMessage('Error updating profile: ' + (error.message || 'Unknown error'), 'error');
+    console.error('Error updating profile:', error);
+    console.error('Error details:', error.response || error.message);
+    const errorMsg = error.message || error.response?.error || error.response?.details || 'Unknown error';
+    showMessage('Error updating profile: ' + errorMsg, 'error');
   }
   
   return false;
@@ -843,7 +1015,7 @@ async function loadMedicalCases() {
 // Display Medical Cases
 function displayMedicalCases(cases, tbody) {
   if (!cases || cases.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No medical cases</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No medical cases</td></tr>';
     return;
   }
 
@@ -851,16 +1023,45 @@ function displayMedicalCases(cases, tbody) {
     <tr>
       <td>${caseItem.case_id}</td>
       <td>${caseItem.case_title || 'Not specified'}</td>
+      <td>${caseItem.patient_name || 'Unknown Patient'}</td>
       <td><span class="status-badge status-${caseItem.case_status || 'active'}">${getStatusText(caseItem.case_status || 'active')}</span></td>
       <td>${caseItem.target_amount || 0} ${caseItem.currency || 'USD'}</td>
       <td>${caseItem.raised_amount || 0} ${caseItem.currency || 'USD'}</td>
       <td>${formatDate(caseItem.created_at)}</td>
       <td>
-        <button class="btn btn-secondary" onclick="viewMedicalCase(${caseItem.case_id})">View</button>
-        ${currentUser?.role === 'admin' ? `<button class="btn btn-danger" onclick="deleteMedicalCase(${caseItem.case_id})">Delete</button>` : ''}
+        ${currentUser?.role === 'doctor' ? `<button class="btn btn-primary edit-case-btn" data-case-id="${caseItem.case_id}">Edit</button>` : ''}
+        ${currentUser?.role !== 'doctor' ? `<button class="btn btn-secondary" onclick="window.viewMedicalCase(${caseItem.case_id})">View</button>` : ''}
+        ${currentUser?.role === 'ngo' ? `<button class="btn btn-primary" onclick="window.showAddCaseUpdateModal(${caseItem.case_id})" style="margin-left: 5px;">Add Update</button>` : ''}
+        ${currentUser?.role === 'admin' ? `<button class="btn btn-danger" onclick="window.deleteMedicalCase(${caseItem.case_id})" style="margin-left: 5px;">Delete</button>` : ''}
       </td>
     </tr>
   `).join('');
+  
+  // Add event listeners to edit buttons for doctors
+  if (currentUser?.role === 'doctor') {
+    tbody.querySelectorAll('.edit-case-btn').forEach(btn => {
+      btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const caseId = parseInt(this.getAttribute('data-case-id'));
+        if (caseId && !isNaN(caseId)) {
+          try {
+            if (typeof showEditMedicalCaseModal === 'function') {
+              await showEditMedicalCaseModal(caseId);
+            } else if (typeof window.showEditMedicalCaseModal === 'function') {
+              await window.showEditMedicalCaseModal(caseId);
+            } else {
+              console.error('showEditMedicalCaseModal function not found');
+              showMessage('Error: Edit function not available', 'error');
+            }
+          } catch (error) {
+            console.error('Error opening edit modal:', error);
+            showMessage('Error opening edit form: ' + (error.message || 'Unknown error'), 'error');
+          }
+        }
+      });
+    });
+  }
 }
 
 async function deleteMedicalCase(id) {
@@ -898,19 +1099,35 @@ async function loadConsultations() {
       addBtn.onclick = showAddConsultationModal;
       pageHeader.appendChild(addBtn);
     }
+  } else if (pageHeader && currentUser?.role === 'doctor') {
+    // Remove add button for doctors if exists
+    const existingBtn = pageHeader.querySelector('.btn-primary');
+    if (existingBtn) {
+      existingBtn.remove();
+    }
   }
 
   try {
     const response = await apiCall('/consultations', 'GET').catch(() => null);
-    // API returns: {message, consultations}
+    // Handle both response formats: {consultations: [...]} or [...]
     const consultations = response?.consultations || (Array.isArray(response) ? response : []);
-    displayConsultations(Array.isArray(consultations) ? consultations : [], container);
+    
+    // Filter consultations based on role
+    let filteredConsultations = consultations;
+    if (currentUser?.role === 'patient') {
+      filteredConsultations = consultations.filter(c => c.patient_id === currentUser.user_id);
+    } else if (currentUser?.role === 'doctor') {
+      filteredConsultations = consultations.filter(c => c.doctor_id === currentUser.user_id);
+    }
+    
+    displayConsultations(Array.isArray(filteredConsultations) ? filteredConsultations : [], container);
   } catch (error) {
     console.error('Error loading consultations:', error);
     showMessage('Error loading consultations', 'error');
     if (container) container.innerHTML = '<p style="text-align: center; padding: 40px;">Error loading data</p>';
   }
 }
+
 
 // Display Consultations
 function displayConsultations(consultations, container) {
@@ -929,10 +1146,30 @@ function displayConsultations(consultations, container) {
         <span class="status-badge status-${consultation.status || 'pending'}">${consultation.status || 'Pending'}</span>
       </div>
       <div class="card-actions">
-        <button class="btn btn-primary" onclick="viewConsultation(${consultation.consultation_id})">View</button>
+        <button class="btn btn-primary view-consultation-btn" data-consultation-id="${consultation.consultation_id}">View</button>
       </div>
     </div>
   `).join('');
+  
+  // Add event listeners to view buttons
+  container.querySelectorAll('.view-consultation-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const consultationId = parseInt(btn.getAttribute('data-consultation-id'));
+      if (consultationId && !isNaN(consultationId)) {
+        try {
+          await viewConsultation(consultationId);
+        } catch (error) {
+          console.error('Error viewing consultation:', error);
+          showMessage('Error loading consultation details', 'error');
+        }
+      } else {
+        showMessage('Invalid consultation ID', 'error');
+      }
+    });
+  });
+
 }
 
 // Load Donations
@@ -1738,12 +1975,13 @@ async function apiCall(endpoint, method = 'GET', data = null) {
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.message || 'Request error');
+    const errorMsg = result.error || result.message || result.details || 'Request error';
+    const error = new Error(errorMsg);
+    error.response = result;
+    throw error;
   }
 
-  // Handle different response formats
-  // ResponseHelper returns: {success: true, message: "...", data: ...}
-  // Some endpoints might return data directly
+  
   if (result.success !== undefined) {
     return result.data !== undefined ? result.data : result;
   }
@@ -1864,9 +2102,22 @@ function toggleSidebar() {
 // Logout
 function handleLogout() {
   if (confirm('Are you sure you want to logout?')) {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    window.location.href = '/login.html';
+    try {
+      // Clear all localStorage data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('refreshToken');
+      
+      // Clear any session storage
+      sessionStorage.clear();
+      
+      // Redirect to login page
+      window.location.href = '/login.html';
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Force redirect even if there's an error
+      window.location.href = '/login.html';
+    }
   }
 }
 
@@ -1944,7 +2195,7 @@ function showModal(title, content) {
   
   // Close modal when clicking on overlay (but not on modal content)
   overlay.onclick = (e) => {
-    // Only close if clicking directly on the overlay, not on modal content
+    
     if (e.target === overlay) {
       closeModal();
     }
@@ -1964,11 +2215,11 @@ function closeModal() {
   const overlay = document.getElementById('modal-overlay');
   if (overlay) {
     overlay.classList.remove('active');
-    // Clear all event listeners by removing and re-adding overlay
+    
     const parent = overlay.parentNode;
     const newOverlay = overlay.cloneNode(false);
     parent.replaceChild(newOverlay, overlay);
-    // Clear overlay content
+    
     setTimeout(() => {
       newOverlay.innerHTML = '';
     }, 300);
@@ -1976,16 +2227,89 @@ function closeModal() {
 }
 
 // Add Medical Case Modal
-function showAddMedicalCaseModal() {
+async function showAddMedicalCaseModal() {
+  let patientSelect = '';
+  
+  // If doctor, show patient selection
+  if (currentUser?.role === 'doctor') {
+    try {
+      // Get patients from medical cases (they have patient_name)
+      const cases = await apiCall('/medical-cases', 'GET').catch(() => ({ cases: [] }));
+      const casesArray = cases?.cases || (Array.isArray(cases) ? cases : []);
+      
+      // Extract unique patients from cases
+      const patientMap = new Map();
+      casesArray.forEach(c => {
+        if (c.patient_id && !patientMap.has(c.patient_id)) {
+          patientMap.set(c.patient_id, {
+            user_id: c.patient_id,
+            full_name: c.patient_name || 'Unknown Patient',
+            email: c.patient_email || ''
+          });
+        }
+      });
+      
+      // Also try to get from existing consultations
+      try {
+        const consultations = await apiCall('/consultations', 'GET').catch(() => ({ consultations: [] }));
+        const consultationsArray = consultations?.consultations || (Array.isArray(consultations) ? consultations : []);
+        consultationsArray.forEach(consult => {
+          if (consult.patient_id && !patientMap.has(consult.patient_id)) {
+            patientMap.set(consult.patient_id, {
+              user_id: consult.patient_id,
+              full_name: consult.patient_name || 'Unknown Patient',
+              email: ''
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Error loading consultations for patients:', e);
+      }
+      
+      const patientList = Array.from(patientMap.values());
+      
+      if (patientList.length > 0) {
+        patientSelect = `
+          <div class="form-group">
+            <label>Patient *</label>
+            <select name="patient_id" required>
+              <option value="">Select a patient...</option>
+              ${patientList.map(p => `<option value="${p.user_id}">${p.full_name}${p.email ? ' (' + p.email + ')' : ''}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        patientSelect = `
+          <div class="form-group">
+            <label>Patient ID *</label>
+            <input type="number" name="patient_id" required placeholder="Enter patient ID">
+            <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      // Fallback to manual input
+      patientSelect = `
+        <div class="form-group">
+          <label>Patient ID *</label>
+          <input type="number" name="patient_id" required placeholder="Enter patient ID">
+          <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+        </div>
+      `;
+    }
+  }
+  
   const content = `
     <form id="add-medical-case-form">
+      ${patientSelect}
       <div class="form-group">
         <label>Case Title *</label>
         <input type="text" name="case_title" required placeholder="e.g., Heart Surgery Fund">
       </div>
       <div class="form-group">
         <label>Case Description *</label>
-        <textarea name="case_description" rows="4" required placeholder="Describe your medical case and why you need funding..."></textarea>
+        <textarea name="case_description" rows="4" required placeholder="Describe the medical case and why funding is needed..."></textarea>
       </div>
       <div class="form-group">
         <label>Target Amount (USD) *</label>
@@ -2021,7 +2345,7 @@ async function handleAddMedicalCase(e) {
   e.stopPropagation();
   
   // Check permission (if permissions are loaded)
-  if (userPermissions.length > 0 && !hasPermission('create_medical_case') && currentUser?.role !== 'patient') {
+  if (userPermissions.length > 0 && !hasPermission('create_medical_case') && currentUser?.role !== 'patient' && currentUser?.role !== 'doctor') {
     showMessage('You do not have permission to create medical cases', 'error');
     return false;
   }
@@ -2032,14 +2356,22 @@ async function handleAddMedicalCase(e) {
   const caseTitle = formData.get('case_title');
   const caseDescription = formData.get('case_description');
   const targetAmount = formData.get('target_amount');
+  const patientId = formData.get('patient_id');
   
-  if (!caseTitle || !caseDescription || !targetAmount) {
+  // For doctors, patient_id is required
+  // For patients, use their own user_id
+  let finalPatientId = patientId;
+  if (currentUser?.role === 'patient') {
+    finalPatientId = currentUser.user_id;
+  }
+  
+  if (!caseTitle || !caseDescription || !targetAmount || !finalPatientId) {
     showMessage('Please fill in all required fields', 'error');
     return false;
   }
   
   const data = {
-    patient_id: currentUser.user_id,
+    patient_id: parseInt(finalPatientId),
     case_title: caseTitle.trim(),
     case_description: caseDescription.trim(),
     target_amount: parseFloat(targetAmount),
@@ -2049,6 +2381,12 @@ async function handleAddMedicalCase(e) {
   // Validate target amount
   if (isNaN(data.target_amount) || data.target_amount <= 0) {
     showMessage('Please enter a valid target amount greater than 0', 'error');
+    return false;
+  }
+  
+  // Validate patient_id
+  if (isNaN(data.patient_id) || data.patient_id <= 0) {
+    showMessage('Please enter a valid patient ID', 'error');
     return false;
   }
 
@@ -2063,16 +2401,241 @@ async function handleAddMedicalCase(e) {
     }, 500);
   } catch (error) {
     console.error('Error creating medical case:', error);
-    showMessage('Error creating medical case: ' + (error.message || 'Unknown error'), 'error');
+    const errorMessage = error.message || error.response?.error || error.response?.details || 'Unknown error';
+    showMessage('Error creating medical case: ' + errorMessage, 'error');
+  }
+  
+  return false;
+}
+
+// Edit Medical Case Modal
+async function showEditMedicalCaseModal(caseId) {
+  try {
+    if (!caseId || isNaN(parseInt(caseId))) {
+      showMessage('Invalid case ID', 'error');
+      return;
+    }
+
+    const caseIdNum = parseInt(caseId);
+    
+    const caseData = await apiCall(`/medical-cases/${caseIdNum}`, 'GET');
+    
+    if (!caseData) {
+      showMessage('Medical case not found', 'error');
+      return;
+    }
+
+    // Escape HTML properly
+    const escapeHtml = (text) => {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    const content = `
+      <form id="edit-medical-case-form">
+        <div class="form-group">
+          <label>Case Title *</label>
+          <input type="text" name="case_title" value="${escapeHtml(caseData.case_title || '')}" required placeholder="e.g., Heart Surgery Fund">
+        </div>
+        <div class="form-group">
+          <label>Case Description *</label>
+          <textarea name="case_description" rows="4" required placeholder="Describe the medical case and why funding is needed...">${escapeHtml(caseData.case_description || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Target Amount (USD) *</label>
+          <input type="number" name="target_amount" step="0.01" min="0" value="${caseData.target_amount || 0}" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Medical Condition</label>
+          <input type="text" name="medical_condition" value="${escapeHtml(caseData.medical_condition || '')}" placeholder="e.g., Heart Disease, Cancer, etc.">
+        </div>
+        <div class="form-group">
+          <label>Status *</label>
+          <select name="case_status" required>
+            <option value="active" ${caseData.case_status === 'active' ? 'selected' : ''}>Active</option>
+            <option value="in_treatment" ${caseData.case_status === 'in_treatment' ? 'selected' : ''}>In Treatment</option>
+            <option value="funded" ${caseData.case_status === 'funded' ? 'selected' : ''}>Funded</option>
+            <option value="completed" ${caseData.case_status === 'completed' ? 'selected' : ''}>Completed</option>
+            <option value="cancelled" ${caseData.case_status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    `;
+    
+    showModal('Edit Medical Case', content);
+    
+    // Attach event listener after modal is shown
+    setTimeout(() => {
+      const form = document.getElementById('edit-medical-case-form');
+      if (form) {
+        // Remove any existing listeners by cloning
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        // Add new listener
+        const updatedForm = document.getElementById('edit-medical-case-form');
+        if (updatedForm) {
+          updatedForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await handleEditMedicalCase(e, caseIdNum);
+          });
+        }
+      }
+    }, 200);
+  } catch (error) {
+    console.error('Error loading medical case:', error);
+    showMessage('Error loading medical case: ' + (error.message || 'Unknown error'), 'error');
+  }
+}
+
+async function handleEditMedicalCase(e, caseId) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  if (!caseId || isNaN(parseInt(caseId))) {
+    showMessage('Invalid case ID', 'error');
+    return false;
+  }
+
+  const form = document.getElementById('edit-medical-case-form');
+  if (!form) {
+    showMessage('Form not found', 'error');
+    return false;
+  }
+
+  const formData = new FormData(form);
+  
+  // Validate required fields
+  const caseTitle = formData.get('case_title');
+  const caseDescription = formData.get('case_description');
+  const targetAmount = formData.get('target_amount');
+  const caseStatus = formData.get('case_status');
+  
+  if (!caseTitle || !caseDescription || !targetAmount || !caseStatus) {
+    showMessage('Please fill in all required fields', 'error');
+    return false;
+  }
+  
+  const data = {
+    case_title: caseTitle.trim(),
+    case_description: caseDescription.trim(),
+    target_amount: parseFloat(targetAmount),
+    medical_condition: formData.get('medical_condition')?.trim() || null,
+    case_status: caseStatus
+  };
+
+  // Validate target amount
+  if (isNaN(data.target_amount) || data.target_amount <= 0) {
+    showMessage('Please enter a valid target amount greater than 0', 'error');
+    return false;
+  }
+
+  try {
+    await apiCall(`/medical-cases/${caseId}`, 'PUT', data);
+    showMessage('Medical case updated successfully!', 'success');
+    closeModal();
+    // Reload data after a short delay
+    setTimeout(() => {
+      loadMedicalCases();
+      loadDashboard();
+    }, 500);
+  } catch (error) {
+    console.error('Error updating medical case:', error);
+    const errorMessage = error.message || error.response?.error || error.response?.details || 'Unknown error';
+    showMessage('Error updating medical case: ' + errorMessage, 'error');
   }
   
   return false;
 }
 
 // Add Consultation Modal
-function showAddConsultationModal() {
+async function showAddConsultationModal() {
+  let patientSelect = '';
+  
+  // If doctor, show patient selection
+  if (currentUser?.role === 'doctor') {
+    try {
+      // Get patients from medical cases (they have patient_name)
+      const cases = await apiCall('/medical-cases', 'GET').catch(() => ({ cases: [] }));
+      const casesArray = cases?.cases || (Array.isArray(cases) ? cases : []);
+      
+      // Extract unique patients from cases
+      const patientMap = new Map();
+      casesArray.forEach(c => {
+        if (c.patient_id && !patientMap.has(c.patient_id)) {
+          patientMap.set(c.patient_id, {
+            user_id: c.patient_id,
+            full_name: c.patient_name || 'Unknown Patient',
+            email: c.patient_email || ''
+          });
+        }
+      });
+      
+      //  try to get from existing consultations
+      try {
+        const consultations = await apiCall('/consultations', 'GET').catch(() => ({ consultations: [] }));
+        const consultationsArray = consultations?.consultations || (Array.isArray(consultations) ? consultations : []);
+        consultationsArray.forEach(consult => {
+          if (consult.patient_id && !patientMap.has(consult.patient_id)) {
+            patientMap.set(consult.patient_id, {
+              user_id: consult.patient_id,
+              full_name: consult.patient_name || 'Unknown Patient',
+              email: ''
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Error loading consultations for patients:', e);
+      }
+      
+      const patientList = Array.from(patientMap.values());
+      
+      if (patientList.length > 0) {
+        patientSelect = `
+          <div class="form-group">
+            <label>Patient *</label>
+            <select name="patient_id" required>
+              <option value="">Select a patient...</option>
+              ${patientList.map(p => `<option value="${p.user_id}">${p.full_name}${p.email ? ' (' + p.email + ')' : ''}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        patientSelect = `
+          <div class="form-group">
+            <label>Patient ID *</label>
+            <input type="number" name="patient_id" required placeholder="Enter patient ID">
+            <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      // Fallback to manual input
+      patientSelect = `
+        <div class="form-group">
+          <label>Patient ID *</label>
+          <input type="number" name="patient_id" required placeholder="Enter patient ID">
+          <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+        </div>
+      `;
+    }
+  }
+  
   const content = `
     <form id="add-consultation-form">
+      ${patientSelect}
       <div class="form-group">
         <label>Consultation Type *</label>
         <select name="consultation_type" required>
@@ -2114,7 +2677,7 @@ function showAddConsultationModal() {
       // Remove any existing listeners
       const newForm = form.cloneNode(true);
       form.parentNode.replaceChild(newForm, form);
-      // Add new listener
+      
       document.getElementById('add-consultation-form').addEventListener('submit', handleAddConsultation);
     }
   }, 100);
@@ -2126,7 +2689,6 @@ async function handleAddConsultation(e) {
   
   const formData = new FormData(e.target);
   const data = {
-    patient_id: currentUser.user_id,
     consultation_type: formData.get('consultation_type'),
     scheduled_at: formData.get('scheduled_at') || null,
     duration_minutes: formData.get('duration_minutes') ? parseInt(formData.get('duration_minutes')) : null,
@@ -2134,6 +2696,24 @@ async function handleAddConsultation(e) {
     low_bandwidth: formData.has('low_bandwidth'),
     status: 'pending'
   };
+  
+  // Set patient_id or doctor_id based on user role
+  if (currentUser?.role === 'patient') {
+    data.patient_id = currentUser.user_id;
+  } else if (currentUser?.role === 'doctor') {
+    data.doctor_id = currentUser.user_id;
+    // Patient ID is required for doctors
+    const patientId = formData.get('patient_id');
+    if (!patientId) {
+      showMessage('Please select or enter a patient ID', 'error');
+      return false;
+    }
+    data.patient_id = parseInt(patientId);
+    if (isNaN(data.patient_id) || data.patient_id <= 0) {
+      showMessage('Invalid patient ID', 'error');
+      return false;
+    }
+  }
 
   try {
     const result = await apiCall('/consultations', 'POST', data);
@@ -2146,7 +2726,8 @@ async function handleAddConsultation(e) {
     }, 500);
   } catch (error) {
     console.error('Error creating consultation:', error);
-    showMessage('Error creating consultation: ' + (error.message || 'Unknown error'), 'error');
+    const errorMsg = error.message || error.error || error.details || 'Unknown error';
+    showMessage('Error creating consultation: ' + errorMsg, 'error');
   }
   
   return false;
@@ -2411,7 +2992,7 @@ async function handleAddMentalHealthSession(e) {
     const result = await apiCall('/mental_health_sessions', 'POST', data);
     showMessage('Mental health session created successfully!', 'success');
     closeModal();
-    // Reload data after a short delay
+    
     setTimeout(() => {
       loadMentalHealthSessions();
       loadDashboard();
@@ -2512,7 +3093,7 @@ async function handleAddSupportGroup(e) {
     const result = await apiCall('/support_groups', 'POST', data);
     showMessage('Support group created successfully!', 'success');
     closeModal();
-    // Reload data after a short delay - always reload support groups if on that page
+   
     setTimeout(() => {
       // Always reload support groups to show the new group
       loadSupportGroups();
@@ -2528,7 +3109,7 @@ async function handleAddSupportGroup(e) {
 
 // Add NGO Modal
 function showAddNGOModal() {
-  // Check permission (if permissions are loaded)
+  
   if (userPermissions.length > 0 && !hasPermission('create_ngo') && currentUser?.role !== 'admin') {
     showMessage('You do not have permission to add NGOs', 'error');
     return;
@@ -2686,6 +3267,7 @@ async function viewMedicalCase(id) {
   try {
     const caseData = await apiCall(`/medical-cases/${id}`, 'GET');
     const donations = await apiCall(`/medical-cases/${id}/donations`, 'GET').catch(() => ({ donations: [] }));
+    const updates = await apiCall(`/medical-cases/${id}/updates`, 'GET').catch(() => []);
     
     const content = `
       <div style="margin-bottom: 20px;">
@@ -2697,8 +3279,21 @@ async function viewMedicalCase(id) {
         <p><strong>Medical Condition:</strong> ${caseData.medical_condition || 'Not specified'}</p>
         <p><strong>Created At:</strong> ${formatDate(caseData.created_at)}</p>
       </div>
+      ${updates && updates.length > 0 ? `
+        <div style="margin-bottom: 20px;">
+          <h4>Case Updates:</h4>
+          <div style="max-height: 200px; overflow-y: auto;">
+            ${updates.map(update => `
+              <div style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
+                <p style="margin: 0 0 5px 0;"><strong>${formatDate(update.created_at)}</strong></p>
+                <p style="margin: 0;">${update.update_content || update.update_text || 'No content'}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
       ${donations.donations && donations.donations.length > 0 ? `
-        <div>
+        <div style="margin-bottom: 20px;">
           <h4>Donations:</h4>
           <ul>
             ${donations.donations.map(d => `<li>${d.amount} ${d.currency} - ${formatDate(d.created_at)}</li>`).join('')}
@@ -2706,6 +3301,7 @@ async function viewMedicalCase(id) {
         </div>
       ` : ''}
       <div class="modal-footer">
+        ${currentUser?.role === 'doctor' || currentUser?.role === 'ngo' ? `<button class="btn btn-primary" onclick="closeModal(); showAddCaseUpdateModal(${id});">Add Update</button>` : ''}
         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
       </div>
     `;
@@ -2717,72 +3313,256 @@ async function viewMedicalCase(id) {
 
 async function viewConsultation(id) {
   try {
-    const consultation = await apiCall(`/consultations/${id}`, 'GET');
-    const messages = await apiCall(`/consultations/${id}/messages`, 'GET').catch(() => ({ messages: [] }));
+    if (!id || isNaN(parseInt(id))) {
+      showMessage('Invalid consultation ID', 'error');
+      return;
+    }
+
+    // Fetch consultation details
+    const response = await apiCall(`/consultations/${id}`, 'GET');
     
+    // Handle different response structures from backend
+    let consultationData = null;
+    if (response && response.consultation) {
+      consultationData = response.consultation;
+    } else if (response && response.consultation_id) {
+      consultationData = response;
+    } else if (response && typeof response === 'object') {
+      consultationData = response;
+    }
+    
+    if (!consultationData || !consultationData.consultation_id) {
+      showMessage('Consultation not found', 'error');
+      return;
+    }
+    
+    // Get messages for this consultation
+    let messagesData = [];
+    try {
+      const messagesResponse = await apiCall(`/consultations/${id}/messages`, 'GET');
+      if (Array.isArray(messagesResponse)) {
+        messagesData = messagesResponse;
+      } else if (messagesResponse && Array.isArray(messagesResponse.messages)) {
+        messagesData = messagesResponse.messages;
+      } else if (messagesResponse && Array.isArray(messagesResponse.data)) {
+        messagesData = messagesResponse.data;
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      // Don't show error to user, just continue without messages
+      messagesData = [];
+    }
+    
+    // Format consultation type
+    const consultationTypeMap = {
+      'video': 'Video Call',
+      'audio': 'Audio Call',
+      'message': 'Message',
+      'in_person': 'In Person'
+    };
+    const consultationType = consultationTypeMap[consultationData.consultation_type] || consultationData.consultation_type || 'Not specified';
+    
+    // Build the content HTML
     const content = `
       <div style="margin-bottom: 20px;">
-        <p><strong>Consultation Type:</strong> ${consultation.consultation.consultation_type || 'Not specified'}</p>
-        <p><strong>Status:</strong> <span class="status-badge status-${consultation.consultation.status || 'pending'}">${getStatusText(consultation.consultation.status || 'pending')}</span></p>
-        <p><strong>Scheduled At:</strong> ${consultation.consultation.scheduled_at ? formatDate(consultation.consultation.scheduled_at) : 'Not specified'}</p>
-        <p><strong>Notes:</strong> ${consultation.consultation.notes || 'None'}</p>
+        <div style="margin-bottom: 15px;">
+          <h3 style="margin-bottom: 10px; color: #333;">Consultation #${consultationData.consultation_id || id}</h3>
+          <p style="color: #666; font-size: 14px; margin: 5px 0;">Created: ${formatDate(consultationData.created_at)}</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div>
+            <p style="margin: 8px 0;"><strong>Consultation Type:</strong> ${consultationType}</p>
+            <p style="margin: 8px 0;"><strong>Status:</strong> <span class="status-badge status-${consultationData.status || 'pending'}">${getStatusText(consultationData.status || 'pending')}</span></p>
+          </div>
+          <div>
+            ${consultationData.patient_name ? `<p style="margin: 8px 0;"><strong>Patient:</strong> ${consultationData.patient_name}</p>` : ''}
+            ${consultationData.doctor_name ? `<p style="margin: 8px 0;"><strong>Doctor:</strong> ${consultationData.doctor_name}</p>` : ''}
+          </div>
+        </div>
+        
+        ${consultationData.scheduled_at ? `
+          <p style="margin: 8px 0;"><strong>Scheduled At:</strong> ${formatDate(consultationData.scheduled_at)}</p>
+        ` : ''}
+        
+        ${consultationData.duration_minutes ? `
+          <p style="margin: 8px 0;"><strong>Duration:</strong> ${consultationData.duration_minutes} minutes</p>
+        ` : ''}
+        
+        ${consultationData.low_bandwidth !== undefined && consultationData.low_bandwidth ? `
+          <p style="margin: 8px 0;"><strong>Low Bandwidth Mode:</strong> Enabled</p>
+        ` : ''}
+        
+        ${consultationData.notes ? `
+          <div style="margin-top: 15px;">
+            <p style="margin-bottom: 5px;"><strong>Notes:</strong></p>
+            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px; margin-top: 5px; white-space: pre-wrap;">
+              ${(consultationData.notes || '').replace(/\n/g, '<br>')}
+            </div>
+          </div>
+        ` : ''}
       </div>
-      ${messages.messages && messages.messages.length > 0 ? `
-        <div>
-          <h4>Messages:</h4>
-          <div style="max-height: 300px; overflow-y: auto;">
-            ${messages.messages.map(m => `
-              <div style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
-                <p>${m.message_text || ''}</p>
-                <small>${formatDate(m.sent_at)}</small>
+      
+      ${messagesData && messagesData.length > 0 ? `
+        <div style="margin-top: 20px;">
+          <h4 style="margin-bottom: 10px; color: #333;">Messages (${messagesData.length}):</h4>
+          <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; background: #fafafa;">
+            ${messagesData.map(m => `
+              <div style="padding: 10px; margin-bottom: 10px; background: #ffffff; border-radius: 8px; border-left: 3px solid #007bff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                <p style="margin: 0 0 5px 0; color: #333; white-space: pre-wrap;">${(m.message_text || m.content || '').replace(/\n/g, '<br>')}</p>
+                <small style="color: #666;">${formatDate(m.sent_at || m.created_at)}</small>
               </div>
             `).join('')}
           </div>
         </div>
-      ` : ''}
-      <div class="modal-footer">
+      ` : '<p style="color: #666; margin-top: 20px; font-style: italic;">No messages yet.</p>'}
+      
+      <div class="modal-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-        <button class="btn btn-primary" onclick="showSendMessageModal(${id})">Send Message</button>
+        <button class="btn btn-primary" id="send-message-trigger-btn" data-consultation-id="${id}">Send Message</button>
       </div>
     `;
+    
     showModal('Consultation Details', content);
+    
+    // Attach event listener to Send Message button
+    setTimeout(() => {
+      const sendBtn = document.getElementById('send-message-trigger-btn');
+      if (sendBtn) {
+        sendBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const consultationId = parseInt(this.getAttribute('data-consultation-id'));
+          closeModal();
+          setTimeout(() => {
+            if (typeof showSendMessageModal === 'function') {
+              showSendMessageModal(consultationId);
+            } else if (typeof window.showSendMessageModal === 'function') {
+              window.showSendMessageModal(consultationId);
+            }
+          }, 300);
+        });
+      }
+    }, 200);
   } catch (error) {
-    showMessage('Error loading consultation: ' + (error.message || 'Unknown error'), 'error');
+    console.error('Error loading consultation:', error);
+    const errorMessage = error.message || error.response?.error || error.response?.details || 'Unknown error';
+    showMessage('Error loading consultation: ' + errorMessage, 'error');
   }
 }
 
 function showSendMessageModal(consultationId) {
+  console.log('showSendMessageModal called with consultationId:', consultationId);
+  
+  if (!consultationId || isNaN(parseInt(consultationId))) {
+    showMessage('Invalid consultation ID', 'error');
+    return;
+  }
+
+  const consultationIdNum = parseInt(consultationId);
+  console.log('Parsed consultation ID:', consultationIdNum);
+  
   const content = `
-    <form id="send-message-form" onsubmit="handleSendMessage(event, ${consultationId})">
+    <form id="send-message-form">
       <div class="form-group">
         <label>Message *</label>
-        <textarea name="content" rows="4" required></textarea>
+        <textarea name="content" id="message-content" rows="4" required placeholder="Type your message here..."></textarea>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal(); viewConsultation(${consultationId})">Cancel</button>
-        <button type="submit" class="btn btn-primary">Send</button>
+        <button type="button" class="btn btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="send-message-submit-btn">Send</button>
       </div>
     </form>
   `;
   showModal('Send Message', content);
+  
+  // Attach event listener after modal is shown
+  setTimeout(() => {
+    const form = document.getElementById('send-message-form');
+    const submitBtn = document.getElementById('send-message-submit-btn');
+    
+    if (form && submitBtn) {
+      console.log('Form and button found, attaching event listeners');
+      
+      // Add click listener to submit button
+      submitBtn.addEventListener('click', async (e) => {
+        console.log('Submit button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        await handleSendMessage(null, consultationIdNum);
+      });
+      
+      // Also add form submit listener as backup
+      form.addEventListener('submit', async (e) => {
+        console.log('Form submitted');
+        e.preventDefault();
+        e.stopPropagation();
+        await handleSendMessage(e, consultationIdNum);
+      });
+      
+      console.log('Event listeners attached');
+    } else {
+      console.error('Form or button not found. Form:', form, 'Button:', submitBtn);
+    }
+  }, 300);
 }
 
 async function handleSendMessage(e, consultationId) {
-  e.preventDefault();
-  const formData = new FormData(e.target);
+  console.log('handleSendMessage called with consultationId:', consultationId);
+  
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  if (!consultationId || isNaN(parseInt(consultationId))) {
+    console.error('Invalid consultation ID:', consultationId);
+    showMessage('Invalid consultation ID', 'error');
+    return false;
+  }
+
+  const form = document.getElementById('send-message-form');
+  if (!form) {
+    console.error('Form not found');
+    showMessage('Form not found', 'error');
+    return false;
+  }
+
+  const formData = new FormData(form);
+  const messageContent = formData.get('content')?.trim();
+  
+  console.log('Message content:', messageContent);
+  
+  if (!messageContent) {
+    showMessage('Please enter a message', 'error');
+    return false;
+  }
+
   const data = {
-    content: formData.get('content'),
+    content: messageContent,
     content_type: 'text'
   };
 
+  console.log('Sending message with data:', data);
+  console.log('API endpoint:', `/consultations/${consultationId}/messages`);
+
   try {
-    await apiCall(`/consultations/${consultationId}/messages`, 'POST', data);
-    showMessage('Message sent successfully', 'success');
+    const result = await apiCall(`/consultations/${consultationId}/messages`, 'POST', data);
+    console.log('Message sent successfully, result:', result);
+    showMessage('Message sent successfully!', 'success');
     closeModal();
-    viewConsultation(consultationId);
+    // Reload consultation to show the new message
+    setTimeout(() => {
+      viewConsultation(consultationId);
+    }, 500);
   } catch (error) {
-    showMessage('Error sending message: ' + (error.message || 'Unknown error'), 'error');
+    console.error('Error sending message:', error);
+    console.error('Error details:', error.response || error.message);
+    const errorMessage = error.message || error.response?.error || error.response?.details || 'Unknown error';
+    showMessage('Error sending message: ' + errorMessage, 'error');
   }
+  
+  return false;
 }
 
 async function viewDonation(id) {
@@ -3268,6 +4048,8 @@ window.handleEditMedicalHistory = handleEditMedicalHistory;
 window.handleAddPatientProfile = handleAddPatientProfile;
 window.showAddMedicalCaseModal = showAddMedicalCaseModal;
 window.handleAddMedicalCase = handleAddMedicalCase;
+window.showEditMedicalCaseModal = showEditMedicalCaseModal;
+window.handleEditMedicalCase = handleEditMedicalCase;
 window.showAddConsultationModal = showAddConsultationModal;
 window.handleAddConsultation = handleAddConsultation;
 window.showAddDonationModal = showAddDonationModal;
@@ -3281,6 +4063,8 @@ window.showAddNGOModal = showAddNGOModal;
 window.showAddInventoryModal = showAddInventoryModal;
 window.viewMedicalCase = viewMedicalCase;
 window.viewConsultation = viewConsultation;
+window.showSendMessageModal = showSendMessageModal;
+window.handleSendMessage = handleSendMessage;
 window.viewDonation = viewDonation;
 window.viewMedicationRequest = viewMedicationRequest;
 window.deleteMedicalCase = deleteMedicalCase;
@@ -3296,4 +4080,67 @@ window.updateProfile = updateProfile;
 window.handleLogout = handleLogout;
 window.toggleSidebar = toggleSidebar;
 window.navigateToPage = navigateToPage;
+
+// Add Case Update Modal
+function showAddCaseUpdateModal(caseId = null) {
+  const content = `
+    <form id="add-case-update-form" onsubmit="handleAddCaseUpdate(event, ${caseId || 'null'})">
+      <div class="form-group">
+        <label>Medical Case ID ${caseId ? `(Current: ${caseId})` : '*'}</label>
+        <input type="number" name="case_id" value="${caseId || ''}" ${caseId ? 'readonly' : 'required'} placeholder="Enter case ID">
+      </div>
+      <div class="form-group">
+        <label>Update Title</label>
+        <input type="text" name="update_title" placeholder="Brief title for this update">
+      </div>
+      <div class="form-group">
+        <label>Update Content *</label>
+        <textarea name="update_text" rows="6" required placeholder="Enter the update details..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Update</button>
+      </div>
+    </form>
+  `;
+  showModal('Add Case Update', content);
+}
+
+async function handleAddCaseUpdate(e, caseId) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const formData = new FormData(e.target);
+  const case_id = caseId || parseInt(formData.get('case_id'));
+  
+  if (!case_id) {
+    showMessage('Case ID is required', 'error');
+    return false;
+  }
+  
+  const data = {
+    update_text: formData.get('update_text'),
+    update_title: formData.get('update_title') || null
+  };
+  
+  if (!data.update_text) {
+    showMessage('Update content is required', 'error');
+    return false;
+  }
+  
+  try {
+    await apiCall(`/medical-cases/${case_id}/updates`, 'POST', data);
+    showMessage('Case update added successfully', 'success');
+    closeModal();
+    loadMedicalCases();
+    loadDashboard();
+  } catch (error) {
+    showMessage('Error adding case update: ' + (error.message || 'Unknown error'), 'error');
+  }
+  
+  return false;
+}
+
+window.showAddCaseUpdateModal = showAddCaseUpdateModal;
+window.handleAddCaseUpdate = handleAddCaseUpdate;
 

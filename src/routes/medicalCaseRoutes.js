@@ -9,7 +9,7 @@ const allowRoles = (...roles) => (req, res, next) => {
   return res.status(403).json({ error: "Access denied: insufficient permissions" });
 };
 
-router.post("/", authenticateToken, requireRole("patient"), medicalCaseController.createCase);
+router.post("/", authenticateToken, allowRoles("patient", "doctor"), medicalCaseController.createCase);
 // Get all cases - admin sees all, patients see their own, donors/ngos see active cases
 router.get("/", authenticateToken, medicalCaseController.getAllCases);
 router.get("/:case_id", authenticateToken, medicalCaseController.getCaseById);

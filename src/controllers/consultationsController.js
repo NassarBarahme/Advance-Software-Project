@@ -12,17 +12,31 @@ async function getConsultationController(req, res) {
   try {
     const { id } = req.params;
     const consultationId = parseInt(id, 10);
+    const pool = require("../config/database");
 
     if (isNaN(consultationId) || consultationId <= 0) {
       return res.status(400).json({ error: "Invalid consultation ID" });
     }
 
-    const consultation = await getConsultationById(consultationId);
-    if (!consultation) {
+    // Get consultation with patient and doctor names
+    const [rows] = await pool.query(
+      `SELECT c.*, 
+       p.full_name as patient_name,
+       d.full_name as doctor_name
+       FROM consultations c
+       LEFT JOIN users p ON c.patient_id = p.user_id
+       LEFT JOIN users d ON c.doctor_id = d.user_id
+       WHERE c.consultation_id = ?`,
+      [consultationId]
+    );
+
+    if (rows.length === 0) {
       return res.status(404).json({ error: "Consultation not found" });
     }
 
-    //only Admin
+    const consultation = rows[0];
+
+    // Check access permissions
     if (
       req.user.role !== "admin" &&
       req.user.user_id !== consultation.patient_id &&

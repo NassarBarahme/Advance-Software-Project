@@ -3,13 +3,42 @@ const medicalCaseModel = require("../models/medicalCaseModel");
 exports.createCase = async (req, res) => {
   try {
     const { patient_id, case_title, case_description, target_amount, medical_condition } = req.body;
+    const userRole = req.user.role;
+    const userId = req.user.user_id;
 
-    if (!patient_id || !case_title || !case_description || !target_amount) {
+    // For patients, use their own user_id if patient_id is not provided
+    // For doctors, patient_id must be provided
+    let finalPatientId = patient_id;
+    if (userRole === 'patient' && !patient_id) {
+      finalPatientId = userId;
+    }
+
+    if (!finalPatientId || !case_title || !case_description || !target_amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Validate that patient_id exists if doctor is creating the case
+    if (userRole === 'doctor') {
+      const pool = require("../config/database");
+      const [users] = await pool.query(
+        `SELECT u.user_id, r.name as role_name 
+         FROM users u 
+         JOIN roles r ON u.role_id = r.role_id 
+         WHERE u.user_id = ?`,
+        [finalPatientId]
+      );
+      
+      if (users.length === 0) {
+        return res.status(404).json({ error: "Patient not found" });
+      }
+      
+      if (users[0].role_name !== 'patient') {
+        return res.status(400).json({ error: "The specified user is not a patient" });
+      }
+    }
+
     const case_id = await medicalCaseModel.createCase({
-      patient_id,
+      patient_id: finalPatientId,
       case_title,
       case_description,
       target_amount,
@@ -18,7 +47,7 @@ exports.createCase = async (req, res) => {
 
     res.status(201).json({
       message: "Medical case created successfully",
-      data: { case_id, patient_id, case_title, target_amount },
+      data: { case_id, patient_id: finalPatientId, case_title, target_amount },
     });
   } catch (err) {
     console.error("Error creating case:", err);

@@ -1,8 +1,32 @@
 const API_BASE_URL = 'http://localhost:3000/api/auth';
 
-function togglePassword(id) {
+function togglePassword(id, event) {
   const input = document.getElementById(id);
-  input.type = input.type === "password" ? "text" : "password";
+  if (!input) {
+    console.error('Input element not found with id:', id);
+    return;
+  }
+  
+  const toggleIcon = event?.target || document.querySelector(`[onclick*="${id}"]`);
+  
+  if (input.type === "password") {
+    input.type = "text";
+    if (toggleIcon) {
+      toggleIcon.textContent = "👁️";
+      toggleIcon.setAttribute('aria-label', 'Hide password');
+    }
+  } else {
+    input.type = "password";
+    if (toggleIcon) {
+      toggleIcon.textContent = "👁️";
+      toggleIcon.setAttribute('aria-label', 'Show password');
+    }
+  }
+  
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 }
 
 function showMessage(msg, type = "error") {
@@ -109,5 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
+  }
+  
+  // Attach event listeners to password toggle buttons
+  const passwordToggle = document.querySelector('.password-toggle');
+  if (passwordToggle) {
+    passwordToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const passwordId = this.getAttribute('data-password-id') || 'login-password';
+      togglePassword(passwordId, e);
+    });
   }
 });

@@ -147,7 +147,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        <button class="btn-logout" onclick="handleLogout()">
+        <button class="btn-logout" id="logout-btn">
           <span class="nav-icon">🚪</span>
           <span>Logout</span>
         </button>
@@ -172,9 +172,9 @@
         </div>
       </header>
 
-      <!-- Page Content -->
+      
       <div class="content-area">
-        <!-- Dashboard Home -->
+        
         <div id="page-dashboard" class="page active">
           <div class="welcome-section">
             <h2>Welcome to HealthPal</h2>
@@ -182,13 +182,13 @@
           </div>
 
           <div class="stats-grid" id="stats-grid">
-            <!-- Stats will be loaded dynamically -->
+            
           </div>
 
           <div class="quick-actions">
             <h3>Quick Actions</h3>
             <div class="actions-grid" id="quick-actions-grid">
-              <!-- Quick actions will be loaded based on user role -->
+              
             </div>
           </div>
         </div>
@@ -199,7 +199,7 @@
             <h2>Profile</h2>
           </div>
           <div class="profile-container" id="profile-container">
-            <!-- Profile content will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -214,6 +214,7 @@
                 <tr>
                   <th>Case ID</th>
                   <th>Title</th>
+                  <th>Patient</th>
                   <th>Status</th>
                   <th>Target Amount</th>
                   <th>Raised Amount</th>
@@ -222,7 +223,7 @@
                 </tr>
               </thead>
               <tbody id="medical-cases-tbody">
-                <!-- Data will be loaded dynamically -->
+                
               </tbody>
             </table>
           </div>
@@ -234,7 +235,7 @@
             <h2>Consultations</h2>
           </div>
           <div class="consultations-list" id="consultations-list">
-            <!-- Consultations will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -257,7 +258,7 @@
                 </tr>
               </thead>
               <tbody id="donations-tbody">
-                <!-- Data will be loaded dynamically -->
+                
               </tbody>
             </table>
           </div>
@@ -282,7 +283,7 @@
                 </tr>
               </thead>
               <tbody id="medication-requests-tbody">
-                <!-- Data will be loaded dynamically -->
+                
               </tbody>
             </table>
           </div>
@@ -294,7 +295,7 @@
             <h2>Mental Health Sessions</h2>
           </div>
           <div class="sessions-list" id="mental-health-sessions-list">
-            <!-- Sessions will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -305,7 +306,7 @@
             <button class="btn btn-primary" onclick="showAddSupportGroupModal()">New Group</button>
           </div>
           <div class="groups-list" id="support-groups-list">
-            <!-- Groups will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -316,7 +317,7 @@
             <button class="btn btn-primary" id="add-ngo-btn" onclick="showAddNGOModal()" style="display: none;">Add NGO</button>
           </div>
           <div class="ngos-grid" id="ngos-grid">
-            <!-- NGOs will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -338,7 +339,7 @@
                 </tr>
               </thead>
               <tbody id="inventory-tbody">
-                <!-- Data will be loaded dynamically -->
+                
               </tbody>
             </table>
           </div>
@@ -361,7 +362,7 @@
                 </tr>
               </thead>
               <tbody id="users-tbody">
-                <!-- Data will be loaded dynamically -->
+                
               </tbody>
             </table>
           </div>
@@ -374,7 +375,7 @@
             <button class="btn btn-primary" onclick="showEditMedicalHistoryModal()">Edit Medical History</button>
           </div>
           <div class="profile-container" id="medical-history-container">
-            <!-- Medical history will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -385,7 +386,7 @@
             <button class="btn btn-primary" onclick="showAddPatientProfileModal()">New Profile</button>
           </div>
           <div class="profiles-grid" id="patient-profiles-grid">
-            <!-- Patient profiles will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -395,7 +396,7 @@
             <h2>Health Content</h2>
           </div>
           <div class="content-grid" id="health-content-grid">
-            <!-- Health content will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -405,7 +406,7 @@
             <h2>Health Alerts</h2>
           </div>
           <div class="alerts-list" id="health-alerts-list">
-            <!-- Health alerts will be loaded dynamically -->
+            
           </div>
         </div>
 
@@ -415,14 +416,14 @@
             <h2>System Settings</h2>
           </div>
           <div class="settings-container" id="system-settings">
-            <!-- Settings will be loaded dynamically -->
+            
           </div>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- Modals will be added dynamically via JavaScript -->
+  
   <div id="modal-overlay" class="modal-overlay"></div>
 </body>
 </html>
