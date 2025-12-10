@@ -795,7 +795,6 @@ API testing is performed using **Postman**. All endpoints have been tested and d
 1. **Environment Variables**
    - Use strong JWT secrets
    - Configure production database
-   - Set NODE_ENV=production
 
 2. **Database**
    - Use production MySQL instance
@@ -804,12 +803,9 @@ API testing is performed using **Postman**. All endpoints have been tested and d
 
 3. **Security**
    - Enable HTTPS
-   - Configure CORS for production domains
-   - Set up rate limiting
    - Enable security headers
 
 4. **Monitoring**
-   - Set up logging (Morgan)
    - Monitor API performance
 
 ### Docker Deployment
