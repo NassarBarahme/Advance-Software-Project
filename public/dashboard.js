@@ -2150,48 +2150,47 @@ function showModal(title, content) {
       });
     }
     
-    // Setup all Cancel/Close buttons in the modal - more comprehensive approach
+    // Function to setup cancel button
+    const setupCancelButton = (btn) => {
+      if (btn.hasAttribute('data-close-listener')) return; // Already set up
+      
+      // Remove onclick to prevent conflicts
+      if (btn.hasAttribute('onclick')) {
+        btn.removeAttribute('onclick');
+      }
+      
+      // Add event listener
+      btn.setAttribute('data-close-listener', 'true');
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      }, true); // Use capture phase for priority
+    };
+    
+    // Setup all Cancel/Close buttons in the modal - comprehensive approach
     const allButtons = overlay.querySelectorAll('button');
     allButtons.forEach(btn => {
       const btnText = btn.textContent.trim().toLowerCase();
       const hasOnclickClose = btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('closeModal');
-      const isCancelBtn = btnText === 'cancel' || btnText === 'close' || btnText === '×' || btn.classList.contains('modal-cancel-btn') || btn.classList.contains('modal-close');
+      const isCancelBtn = btnText === 'cancel' || btnText === 'close' || btnText === '×' || 
+                         btn.classList.contains('modal-cancel-btn') || btn.classList.contains('modal-close');
       
       if (hasOnclickClose || isCancelBtn) {
-        // Remove onclick attribute to prevent conflicts
-        btn.removeAttribute('onclick');
-        // Remove any existing listeners by cloning
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        // Add new listener
-        if (!newBtn.hasAttribute('data-close-listener')) {
-          newBtn.setAttribute('data-close-listener', 'true');
-          newBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            closeModal();
-          });
-        }
+        setupCancelButton(btn);
       }
     });
     
-    // Also setup Cancel buttons using a more aggressive approach - second pass
+    // Second pass - catch any buttons we might have missed
     setTimeout(() => {
       overlay.querySelectorAll('button').forEach(btn => {
         const btnText = btn.textContent.trim().toLowerCase();
         if ((btnText === 'cancel' || btnText === 'close') && !btn.hasAttribute('data-close-listener')) {
-          btn.setAttribute('data-close-listener', 'true');
-          btn.removeAttribute('onclick');
-          btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            closeModal();
-          }, true); // Use capture phase
+          setupCancelButton(btn);
         }
       });
-    }, 50);
-  }, 10);
+    }, 150);
+  }, 150);
   
   // Close modal when clicking on overlay (but not on modal content)
   overlay.onclick = (e) => {
