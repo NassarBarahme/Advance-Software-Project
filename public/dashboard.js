@@ -6,6 +6,12 @@ let accessToken = null;
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth();
+  
+  // Initialize language system
+  if (typeof initLanguage === 'function') {
+    initLanguage();
+  }
+  
   setupNavigation();
   loadDashboard();
   // Load user permissions on startup
@@ -27,6 +33,38 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  
+  // Setup language toggle button
+  const languageToggle = document.getElementById('language-toggle');
+  if (languageToggle) {
+    languageToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof toggleLanguage === 'function') {
+        toggleLanguage();
+      } else if (typeof window.toggleLanguage === 'function') {
+        window.toggleLanguage();
+      }
+    });
+  }
+  
+  // Listen for language changes
+  document.addEventListener('languageChanged', () => {
+    // Reload current page data when language changes
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+      const pageName = activePage.id.replace('page-', '');
+      updatePageTitle(pageName);
+      loadPageData(pageName);
+    }
+    
+    // Reload quick actions to update translations
+    const quickActionsGrid = document.getElementById('quick-actions-grid');
+    if (quickActionsGrid) {
+      const actions = getQuickActions();
+      displayQuickActions(actions, quickActionsGrid);
+    }
+  });
 });
 
 // Setup button event listeners for buttons defined in HTML
@@ -180,25 +218,55 @@ function navigateToPage(pageName) {
 
 // Update Page Title
 function updatePageTitle(pageName) {
-  const titles = {
-    'dashboard': 'Dashboard',
-    'profile': 'Profile',
-    'medical-history': 'Medical History',
-    'medical-cases': 'Medical Cases',
-    'patient-profiles': 'My Profiles',
-    'consultations': 'Consultations',
-    'donations': 'Donations',
-    'medication-requests': 'Medication Requests',
-    'mental-health': 'Mental Health',
-    'support-groups': 'Support Groups',
-    'health-content': 'Health Content',
-    'health-alerts': 'Health Alerts',
-    'ngos': 'NGOs',
-    'medical-inventory': 'Medical Inventory',
-    'users': 'Users',
-    'system': 'System Settings'
-  };
-  document.getElementById('page-title').textContent = titles[pageName] || pageName;
+  const pageTitleEl = document.getElementById('page-title');
+  if (!pageTitleEl) return;
+  
+  // Use translation if available, otherwise use English fallback
+  if (typeof t === 'function') {
+    // Map page names to translation keys
+    const pageKeyMap = {
+      'dashboard': 'dashboard',
+      'profile': 'profile',
+      'medical-history': 'medicalHistory',
+      'medical-cases': 'medicalCases',
+      'patient-profiles': 'patientProfiles',
+      'consultations': 'consultations',
+      'donations': 'donations',
+      'medication-requests': 'medicationRequests',
+      'mental-health': 'mentalHealth',
+      'support-groups': 'supportGroups',
+      'health-content': 'healthContent',
+      'health-alerts': 'healthAlerts',
+      'ngos': 'ngos',
+      'medical-inventory': 'inventory',
+      'users': 'users',
+      'system': 'systemSettings'
+    };
+    
+    const translationKey = pageKeyMap[pageName] || pageName;
+    pageTitleEl.textContent = t(translationKey) || pageName;
+  } else {
+    // Fallback to English
+    const titles = {
+      'dashboard': 'Dashboard',
+      'profile': 'Profile',
+      'medical-history': 'Medical History',
+      'medical-cases': 'Medical Cases',
+      'patient-profiles': 'My Profiles',
+      'consultations': 'Consultations',
+      'donations': 'Donations',
+      'medication-requests': 'Medication Requests',
+      'mental-health': 'Mental Health',
+      'support-groups': 'Support Groups',
+      'health-content': 'Health Content',
+      'health-alerts': 'Health Alerts',
+      'ngos': 'NGOs',
+      'medical-inventory': 'Medical Inventory',
+      'users': 'Users',
+      'system': 'System Settings'
+    };
+    pageTitleEl.textContent = titles[pageName] || pageName;
+  }
 }
 
 // Load Page Data
@@ -497,17 +565,22 @@ function getQuickActions() {
   const role = currentUser?.role;
   const actions = [];
 
+  // Helper function to get translated text
+  const getText = (key) => {
+    return typeof t === 'function' ? t(key) : key;
+  };
+
   if (role === 'patient') {
     actions.push({
       icon: '📋',
-      title: 'Medical History',
-      description: 'View and edit your medical history',
+      title: getText('medicalHistory'),
+      description: getText('viewEditMedicalHistory'),
       action: function() { navigateToPage('medical-history'); }
     });
     actions.push({
       icon: '🏥',
-      title: 'Add Medical Case',
-      description: 'Create a new medical case',
+      title: getText('addMedicalCase'),
+      description: getText('createNewMedicalCase'),
       action: function() { 
         if (typeof showAddMedicalCaseModal === 'function') {
           showAddMedicalCaseModal();
@@ -518,8 +591,8 @@ function getQuickActions() {
     });
     actions.push({
       icon: '📝',
-      title: 'Create Profile',
-      description: 'Create a new patient profile',
+      title: getText('createProfile'),
+      description: getText('createNewPatientProfile'),
       action: function() { 
         if (typeof showAddPatientProfileModal === 'function') {
           showAddPatientProfileModal();
@@ -530,8 +603,8 @@ function getQuickActions() {
     });
     actions.push({
       icon: '💬',
-      title: 'New Consultation',
-      description: 'Request a consultation from a doctor',
+      title: getText('newConsultation'),
+      description: getText('requestConsultationFromDoctor'),
       action: function() { 
         if (typeof showAddConsultationModal === 'function') {
           showAddConsultationModal();
@@ -542,8 +615,8 @@ function getQuickActions() {
     });
     actions.push({
       icon: '💊',
-      title: 'Request Medication',
-      description: 'Request medication from pharmacy',
+      title: getText('requestMedication'),
+      description: getText('requestMedicationFromPharmacy'),
       action: function() { 
         if (typeof showAddMedicationRequestModal === 'function') {
           showAddMedicationRequestModal();
@@ -554,8 +627,8 @@ function getQuickActions() {
     });
     actions.push({
       icon: '🧠',
-      title: 'Mental Health Session',
-      description: 'Book a mental health session',
+      title: getText('mentalHealthSession'),
+      description: getText('bookMentalHealthSession'),
       action: function() { 
         if (typeof showAddMentalHealthSessionModal === 'function') {
           showAddMentalHealthSessionModal();
@@ -566,21 +639,21 @@ function getQuickActions() {
     });
     actions.push({
       icon: '📚',
-      title: 'Health Content',
-      description: 'Browse health information',
+      title: getText('healthContent'),
+      description: getText('browseHealthInformation'),
       action: function() { navigateToPage('health-content'); }
     });
     actions.push({
       icon: '🔔',
-      title: 'Health Alerts',
-      description: 'View health alerts',
+      title: getText('healthAlerts'),
+      description: getText('viewHealthAlerts'),
       action: function() { navigateToPage('health-alerts'); }
     });
   } else if (role === 'doctor') {
     actions.push({
       icon: '💬',
-      title: 'New Consultation',
-      description: 'Create a new consultation',
+      title: getText('newConsultation'),
+      description: getText('createNewConsultation'),
       action: () => {
         if (typeof showAddConsultationModal === 'function') {
           showAddConsultationModal();
@@ -589,20 +662,20 @@ function getQuickActions() {
     });
     actions.push({
       icon: '💬',
-      title: 'My Consultations',
-      description: 'View all consultations',
+      title: getText('myConsultations'),
+      description: getText('viewAllConsultations'),
       action: () => navigateToPage('consultations')
     });
     actions.push({
       icon: '🏥',
-      title: 'Medical Cases',
-      description: 'View and manage medical cases',
+      title: getText('medicalCases'),
+      description: getText('viewManageMedicalCases'),
       action: () => navigateToPage('medical-cases')
     });
     actions.push({
       icon: '🏥',
-      title: 'Add Medical Case',
-      description: 'Create a new medical case',
+      title: getText('addMedicalCase'),
+      description: getText('createNewMedicalCase'),
       action: () => {
         if (typeof showAddMedicalCaseModal === 'function') {
           showAddMedicalCaseModal();
@@ -614,46 +687,46 @@ function getQuickActions() {
   } else if (role === 'donor') {
     actions.push({
       icon: '❤️',
-      title: 'New Donation',
-      description: 'Make a donation',
+      title: getText('newDonation'),
+      description: getText('makeDonation'),
       action: () => showAddDonationModal()
     });
     actions.push({
       icon: '🏥',
-      title: 'Medical Cases',
-      description: 'View cases needing donations',
+      title: getText('medicalCases'),
+      description: getText('viewCasesNeedingDonations'),
       action: () => navigateToPage('medical-cases')
     });
   } else if (role === 'pharmacy') {
     actions.push({
       icon: '💊',
-      title: 'Medication Requests',
-      description: 'View medication requests',
+      title: getText('medicationRequests'),
+      description: getText('viewMedicationRequests'),
       action: () => navigateToPage('medication-requests')
     });
     actions.push({
       icon: '📦',
-      title: 'Medical Inventory',
-      description: 'Manage medical inventory',
+      title: getText('medicalInventory'),
+      description: getText('manageMedicalInventory'),
       action: () => navigateToPage('medical-inventory')
     });
   } else if (role === 'admin') {
     actions.push({
       icon: '👥',
-      title: 'Users',
-      description: 'Manage users',
+      title: getText('users'),
+      description: getText('manageUsers'),
       action: () => navigateToPage('users')
     });
     actions.push({
       icon: '🏛️',
-      title: 'NGOs',
-      description: 'Manage NGOs',
+      title: getText('ngos'),
+      description: getText('manageNGOs'),
       action: () => navigateToPage('ngos')
     });
     actions.push({
       icon: '⚙️',
-      title: 'System Settings',
-      description: 'System settings',
+      title: getText('systemSettings'),
+      description: getText('systemSettings'),
       action: () => navigateToPage('system')
     });
   }
@@ -667,7 +740,19 @@ function displayQuickActions(actions, container) {
     return;
   }
   
-  container.innerHTML = actions.map((action, index) => `
+  // Helper function to get translated text
+  const getText = (key) => {
+    return typeof t === 'function' ? t(key) : key;
+  };
+  
+  // Re-translate actions if language changed
+  const translatedActions = actions.map(action => {
+    // Extract translation key from title/description if they're already translated
+    // For now, we'll regenerate using getQuickActions which uses t()
+    return action;
+  });
+  
+  container.innerHTML = translatedActions.map((action, index) => `
     <div class="action-card" data-action-index="${index}">
       <div class="action-card-icon">${action.icon}</div>
       <h4>${action.title}</h4>
@@ -2101,7 +2186,8 @@ function toggleSidebar() {
 
 // Logout
 function handleLogout() {
-  if (confirm('Are you sure you want to logout?')) {
+  const confirmMsg = typeof t === 'function' ? t('confirmLogout') : 'Are you sure you want to logout?';
+  if (confirm(confirmMsg)) {
     try {
       // Clear all localStorage data
       localStorage.removeItem('accessToken');
@@ -2118,6 +2204,45 @@ function handleLogout() {
       // Force redirect even if there's an error
       window.location.href = '/login.html';
     }
+  }
+}
+
+// Toggle Language
+function toggleLanguage() {
+  const currentLang = typeof getCurrentLanguage === 'function' ? getCurrentLanguage() : (currentUser?.preferred_language || 'arabic');
+  const newLang = currentLang === 'arabic' ? 'english' : 'arabic';
+  
+  if (typeof setLanguage === 'function') {
+    if (setLanguage(newLang)) {
+      // Update user preference in database if logged in
+      if (currentUser && currentUser.user_id) {
+        updateUserLanguagePreference(newLang);
+      }
+      // Reload dashboard to apply translations
+      loadDashboard();
+      // Ensure translations are applied after dashboard loads
+      setTimeout(() => {
+        if (typeof applyTranslations === 'function') {
+          applyTranslations();
+        } else if (typeof window.applyTranslations === 'function') {
+          window.applyTranslations();
+        }
+      }, 100);
+    }
+  }
+}
+
+// Update user language preference in database
+async function updateUserLanguagePreference(lang) {
+  try {
+    await apiCall(`/users/${currentUser.user_id}`, 'PUT', { preferred_language: lang });
+    // Update current user object
+    if (currentUser) {
+      currentUser.preferred_language = lang;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    }
+  } catch (error) {
+    console.error('Error updating language preference:', error);
   }
 }
 
@@ -2267,12 +2392,14 @@ async function showAddMedicalCaseModal() {
       
       const patientList = Array.from(patientMap.values());
       
+      const getText = (key) => typeof t === 'function' ? t(key) : key;
+      
       if (patientList.length > 0) {
         patientSelect = `
           <div class="form-group">
-            <label>Patient *</label>
+            <label>${getText('patient')} *</label>
             <select name="patient_id" required>
-              <option value="">Select a patient...</option>
+              <option value="">${getText('selectPatient')}</option>
               ${patientList.map(p => `<option value="${p.user_id}">${p.full_name}${p.email ? ' (' + p.email + ')' : ''}</option>`).join('')}
             </select>
           </div>
@@ -2280,51 +2407,55 @@ async function showAddMedicalCaseModal() {
       } else {
         patientSelect = `
           <div class="form-group">
-            <label>Patient ID *</label>
-            <input type="number" name="patient_id" required placeholder="Enter patient ID">
-            <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+            <label>${getText('patient')} ID *</label>
+            <input type="number" name="patient_id" required placeholder="${getText('enterPatientId')}">
+            <small style="color: #666; font-size: 0.85em;">${getText('enterPatientId')}</small>
           </div>
         `;
       }
     } catch (error) {
       console.error('Error loading patients:', error);
+      const getText = (key) => typeof t === 'function' ? t(key) : key;
       // Fallback to manual input
       patientSelect = `
         <div class="form-group">
-          <label>Patient ID *</label>
-          <input type="number" name="patient_id" required placeholder="Enter patient ID">
-          <small style="color: #666; font-size: 0.85em;">Enter the patient's user ID</small>
+          <label>${getText('patient')} ID *</label>
+          <input type="number" name="patient_id" required placeholder="${getText('enterPatientId')}">
+          <small style="color: #666; font-size: 0.85em;">${getText('enterPatientId')}</small>
         </div>
       `;
     }
   }
   
+  const getText = (key) => typeof t === 'function' ? t(key) : key;
+  const modalTitle = getText('addMedicalCase');
+  
   const content = `
     <form id="add-medical-case-form">
       ${patientSelect}
       <div class="form-group">
-        <label>Case Title *</label>
-        <input type="text" name="case_title" required placeholder="e.g., Heart Surgery Fund">
+        <label>${getText('caseTitle')} *</label>
+        <input type="text" name="case_title" required placeholder="${getText('caseTitlePlaceholder')}">
       </div>
       <div class="form-group">
-        <label>Case Description *</label>
-        <textarea name="case_description" rows="4" required placeholder="Describe the medical case and why funding is needed..."></textarea>
+        <label>${getText('caseDescription')} *</label>
+        <textarea name="case_description" rows="4" required placeholder="${getText('caseDescriptionPlaceholder')}"></textarea>
       </div>
       <div class="form-group">
-        <label>Target Amount (USD) *</label>
-        <input type="number" name="target_amount" step="0.01" min="0" required placeholder="0.00">
+        <label>${getText('targetAmount')} (USD) *</label>
+        <input type="number" name="target_amount" step="0.01" min="0" required placeholder="${getText('targetAmountPlaceholder')}">
       </div>
       <div class="form-group">
-        <label>Medical Condition</label>
-        <input type="text" name="medical_condition" placeholder="e.g., Heart Disease, Cancer, etc.">
+        <label>${getText('medicalCondition')}</label>
+        <input type="text" name="medical_condition" placeholder="${getText('medicalConditionPlaceholder')}">
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary modal-cancel-btn">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create Case</button>
+        <button type="button" class="btn btn-secondary modal-cancel-btn">${getText('cancel')}</button>
+        <button type="submit" class="btn btn-primary">${getText('create')}</button>
       </div>
     </form>
   `;
-  showModal('Add New Medical Case', content);
+  showModal(modalTitle, content);
   
   // Attach event listener after modal is shown
   setTimeout(() => {
@@ -2364,8 +2495,10 @@ async function handleAddMedicalCase(e) {
     finalPatientId = currentUser.user_id;
   }
   
+  const getText = (key) => typeof t === 'function' ? t(key) : key;
+  
   if (!caseTitle || !caseDescription || !targetAmount || !finalPatientId) {
-    showMessage('Please fill in all required fields', 'error');
+    showMessage(getText('pleaseFillAllFields'), 'error');
     return false;
   }
   
@@ -2379,19 +2512,19 @@ async function handleAddMedicalCase(e) {
 
   // Validate target amount
   if (isNaN(data.target_amount) || data.target_amount <= 0) {
-    showMessage('Please enter a valid target amount greater than 0', 'error');
+    showMessage(getText('enterValidAmount'), 'error');
     return false;
   }
   
   // Validate patient_id
   if (isNaN(data.patient_id) || data.patient_id <= 0) {
-    showMessage('Please enter a valid patient ID', 'error');
+    showMessage(getText('enterValidPatientId'), 'error');
     return false;
   }
 
   try {
     const result = await apiCall('/medical-cases', 'POST', data);
-    showMessage('Medical case created successfully!', 'success');
+    showMessage(getText('medicalCaseCreatedSuccessfully'), 'success');
     closeModal();
     // Reload data after a short delay
     setTimeout(() => {
@@ -4079,6 +4212,8 @@ window.updateProfile = updateProfile;
 window.handleLogout = handleLogout;
 window.toggleSidebar = toggleSidebar;
 window.navigateToPage = navigateToPage;
+window.toggleLanguage = toggleLanguage;
+window.updateUserLanguagePreference = updateUserLanguagePreference;
 
 // Add Case Update Modal
 function showAddCaseUpdateModal(caseId = null) {

@@ -6,7 +6,7 @@
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Project Overview](#project-overview)
 - [Technology Stack](#technology-stack)
@@ -777,14 +777,14 @@ API testing is performed using **Postman**. All endpoints have been tested and d
 
 ### Tested Endpoints
 
-- ✅ Authentication endpoints (register, login, logout, refresh)
-- ✅ User CRUD operations
-- ✅ Role and permission management
-- ✅ Patient and doctor operations
-- ✅ Consultation booking
-- ✅ Donation processing
-- ✅ Medical case management
-- ✅ Error handling and input validation
+-  Authentication endpoints (register, login, logout, refresh)
+-  User CRUD operations
+-  Role and permission management
+-  Patient and doctor operations
+-  Consultation booking
+-  Donation processing
+-  Medical case management
+-  Error handling and input validation
 
 ---
 
@@ -914,7 +914,7 @@ This project is licensed under the MIT License.
 
 <div align="center">
 
-**Made with ❤️ for the Palestinian healthcare community**
+
 
 [⬆ Back to Top](#healthpal---digital-healthcare-platform)
 

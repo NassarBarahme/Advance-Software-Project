@@ -39,7 +39,7 @@ async function sendOTP(email) {
     return otp;
 
   } catch (error) {
-    console.error("🔥 ERROR sending OTP:", error);
+    console.error(" ERROR sending OTP:", error);
     throw error;
   }
 }
