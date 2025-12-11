@@ -403,3 +403,16 @@ CREATE TABLE api_logs (
   PRIMARY KEY (log_id),
   CONSTRAINT fk_log_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ================================
+-- PASSWORD RESET OTP
+-- ================================
+CREATE TABLE password_resets (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email VARCHAR(255) NOT NULL,
+  otp_code VARCHAR(10) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

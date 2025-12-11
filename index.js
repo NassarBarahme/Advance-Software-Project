@@ -9,6 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 const pool = require('./src/config/database');
+const rolesRoutes = require('./src/routes/rolesRoutes');
 
 const patientsRoutes = require('./src/routes/patients');
 const healthContentRoutes = require('./src/routes/healthContent');
@@ -29,6 +30,7 @@ const ngoRoutes = require('./src/routes/ngoRoutes');
 const staffRoutes = require('./src/routes/staffRoutes');
 const consultationsRoutes = require('./src/routes/consultationsRoutes');
 const systemRoutes = require('./src/routes/systemRoutes');
+app.use('/api/roles', rolesRoutes);
 
 app.use(helmet());
 app.use(cors());

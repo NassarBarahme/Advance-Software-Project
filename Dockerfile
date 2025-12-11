@@ -24,6 +24,8 @@ RUN mkdir -p uploads
 
 RUN chmod -R 755 /app
 
+RUN npm install nodemailer
+
 
 RUN echo '#!/bin/sh' > /app/wait-for-it.sh && \
     echo 'set -e' >> /app/wait-for-it.sh && \

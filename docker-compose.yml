@@ -6,6 +6,11 @@
     container_name: healthpal-api
     ports:
       - "3000:3000"
+
+    # 🔥 هذا هو السطر الذي يسمح لـ Docker بتحميل .env
+    env_file:
+      - .env
+
     environment:
       - NODE_ENV=production
       - DB_HOST=db
@@ -19,11 +24,14 @@
     depends_on:
       db:
         condition: service_healthy
+
     volumes:
       - ./uploads:/app/uploads
+
     restart: unless-stopped
     networks:
       - healthpal-network
+
     command: sh -c "/app/wait-for-it.sh db 3306 && node index.js"
 
   db:
