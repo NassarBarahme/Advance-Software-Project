@@ -5,11 +5,25 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 
+
+
+
+const logRequests = require('./src/middleware/logRequests');
+
+ 
+
+
+
+
 const app = express();
 const port = process.env.PORT || 3000;
 
 const pool = require('./src/config/database');
 const rolesRoutes = require('./src/routes/rolesRoutes');
+
+app.use(express.json());
+app.use(logRequests);
+
 
 const patientsRoutes = require('./src/routes/patients');
 const healthContentRoutes = require('./src/routes/healthContent');
